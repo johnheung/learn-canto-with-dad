@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { router } from 'expo-router';
 import { Screen } from '@/components/Screen';
 import { Button } from '@/components/Button';
@@ -26,7 +27,7 @@ export default function BuddyScreen() {
 
   return (
     <Screen edges={['top', 'bottom', 'left', 'right']}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" bottomOffset={96}>
         <Text style={styles.title}>{state.mascot ? 'Your buddy' : 'Choose your buddy'}</Text>
         <Text style={styles.detail}>Your buddy hatches after your first lesson and grows as you earn XP.</Text>
 
@@ -66,7 +67,7 @@ export default function BuddyScreen() {
             <Text style={styles.cancelText}>Cancel</Text>
           </Pressable>
         ) : null}
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </Screen>
   );
 }

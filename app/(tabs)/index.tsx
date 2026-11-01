@@ -114,7 +114,7 @@ export default function LearnScreen() {
                         You're out of hearts. Practise to earn one
                         {heartWait ? `, or wait ${Math.ceil(heartWait / 60000)} min` : ''}.
                       </Text>
-                      <Button label="Practice" onPress={() => router.push('/practice')} />
+                      <Button label="Practice" onPress={() => router.navigate('/practice')} />
                     </>
                   ) : (
                     <>
