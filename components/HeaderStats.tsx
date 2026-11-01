@@ -14,7 +14,7 @@ export function HeaderStats() {
         <Text style={styles.flagText}>粵</Text>
       </View>
       <StatPill testID="streak" icon="flame" color={theme.colors.streak} value={displayStreak(state, now)} />
-      <StatPill icon="flash" color={theme.colors.xp} value={state.xp} />
+      <StatPill testID="stars" icon="star" color={theme.colors.xp} value={state.totals.stars} />
       <StatPill
         icon="heart"
         color={theme.colors.heart}

@@ -19,6 +19,9 @@ A mobile app for learning Cantonese a few minutes a day. It's built with Expo (R
 
 - **Motivation**: XP, a daily goal, a streak, hearts (optional), lesson levels (each lesson can be levelled up 3 times), and a celebration screen. Wrong answers come back at the end of the lesson.
 - **Practice**: a spaced-repetition review (Leitner boxes) of your weakest and overdue words. Each practice session earns a heart.
+- **Buddy**: pick an animal (🐼 🐱 🐶 🐰 🐯 🐲) and name it. It hatches after the first lesson and grows through 5 stages with XP. Its mood shows whether you practised today, and it cheers you on in Cantonese.
+- **Stars and stickers**: 1–3 stars per lesson by accuracy. Every finished session earns an emoji sticker of a word from that unit. Filling a unit's page earns 5 bonus stars.
+- **Rewards from a parent**: in the PIN-locked **Settings → Parent area**, set real rewards and when they unlock: earn stars, finish lessons, reach a streak, learn new words, or pass unit tests. Progress counts from when the reward is set; streaks use the current streak. Rewards can repeat. The learner taps **Claim** on the Rewards tab, and the parent confirms with the PIN.
 - **Audio**: the phone's Cantonese text-to-speech voice (`yue-HK` / `zh-HK`). If none is installed, the Learn screen shows a one-time tip and Settings gives the steps: *Settings → System → Languages → Text-to-speech output → Speech Services by Google → ⚙ → Install voice data → Cantonese (Hong Kong)*. Then tap **Check again** in the app's Settings.
 
 ## Difficulty
@@ -78,7 +81,10 @@ lib/content/         Course data (course.ts) and lookups
 lib/engine/          Pure logic: difficulty, lesson generation, grading, spaced repetition, lesson planning
 lib/progress.ts      XP, streaks, hearts, unlocking (pure functions)
 lib/context/         React context that persists progress with AsyncStorage
-__tests__/           Jest tests: engine, progress rules and every exercise component
+lib/rewards.ts       Reward goals, progress, claiming (pure functions)
+lib/stickers.ts      Sticker pages (one per unit) and sticker picking
+lib/mascot.ts        Buddy species, growth stages, mood and cheers
+__tests__/           Jest tests: engine, progress rules, rewards, stickers, buddy and every exercise component
 ```
 
 To add content, add words or sentences in `lib/content/course.ts`. In a sentence, separate the tokens with `|` in both the characters and the Jyutping. Each token's Jyutping needs one syllable per character, and the tests check this.

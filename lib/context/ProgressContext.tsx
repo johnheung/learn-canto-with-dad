@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { Level, ProgressState, Settings } from '@/lib/types';
+import { Level, MascotSpecies, ProgressState, Settings } from '@/lib/types';
 import { clearState, loadState, saveState } from '@/lib/storage';
 import { units } from '@/lib/content';
 import { LEVEL_START_UNIT } from '@/lib/engine/difficulty';
@@ -12,6 +12,7 @@ import {
   loseHeart,
   recordAnswer,
 } from '@/lib/progress';
+import { addReward, claimReward, deleteReward, RewardDraft, updateReward } from '@/lib/rewards';
 
 interface ProgressContextValue {
   state: ProgressState;
@@ -29,6 +30,11 @@ interface ProgressContextValue {
     mistakes: number;
   }) => CompletionResult;
   reset: () => Promise<void>;
+  adoptMascot: (species: MascotSpecies, name: string) => void;
+  setParentPin: (pin: string) => void;
+  saveReward: (draft: RewardDraft, id?: string) => void;
+  removeReward: (id: string) => void;
+  claim: (id: string) => void;
 }
 
 const ProgressContext = createContext<ProgressContextValue | undefined>(undefined);
@@ -92,12 +98,48 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
 
   const reset = useCallback(async () => {
     await clearState();
-    apply(() => initialState());
+    // Keep the parent's PIN and rewards; reward progress starts again from zero.
+    apply((s) => ({
+      ...initialState(),
+      parentPin: s.parentPin,
+      rewards: s.rewards.map((r) => ({ ...r, baseline: 0 })),
+    }));
   }, [apply]);
 
+  const adoptMascot = useCallback(
+    (species: MascotSpecies, name: string) => apply((s) => ({ ...s, mascot: { species, name: name.trim() } })),
+    [apply],
+  );
+
+  const setParentPin = useCallback((pin: string) => apply((s) => ({ ...s, parentPin: pin })), [apply]);
+
+  const saveReward = useCallback(
+    (draft: RewardDraft, id?: string) =>
+      apply((s) => (id ? updateReward(s, id, draft, Date.now()) : addReward(s, draft, Date.now()))),
+    [apply],
+  );
+
+  const removeReward = useCallback((id: string) => apply((s) => deleteReward(s, id)), [apply]);
+
+  const claim = useCallback((id: string) => apply((s) => claimReward(s, id, Date.now())), [apply]);
+
   const value = useMemo(
-    () => ({ state, loading, onboard, updateSettings, answer, loseHeart: loseHeartAction, complete, reset }),
-    [state, loading, onboard, updateSettings, answer, loseHeartAction, complete, reset],
+    () => ({
+      state,
+      loading,
+      onboard,
+      updateSettings,
+      answer,
+      loseHeart: loseHeartAction,
+      complete,
+      reset,
+      adoptMascot,
+      setParentPin,
+      saveReward,
+      removeReward,
+      claim,
+    }),
+    [state, loading, onboard, updateSettings, answer, loseHeartAction, complete, reset, adoptMascot, setParentPin, saveReward, removeReward, claim],
   );
 
   return <ProgressContext.Provider value={value}>{children}</ProgressContext.Provider>;

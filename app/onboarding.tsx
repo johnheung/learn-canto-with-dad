@@ -71,7 +71,7 @@ export default function Onboarding() {
           onPress={() => {
             if (step === 'level') return setStep('goal');
             onboard(level, goal);
-            router.replace('/');
+            router.replace('/buddy');
           }}
         />
       </View>

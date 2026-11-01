@@ -1,16 +1,32 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { Button } from '@/components/Button';
 import { ProgressBar } from '@/components/ProgressBar';
 import { useProgress } from '@/lib/context/ProgressContext';
+import { units } from '@/lib/content';
+import { cheer, mascotEmoji, STAGES } from '@/lib/mascot';
 import { displayStreak, xpToday } from '@/lib/progress';
+import { readyRewardCount } from '@/lib/rewards';
+import { speak } from '@/lib/speech';
+import { STICKER_PAGES, stickerWord } from '@/lib/stickers';
 import { theme } from '@/lib/theme';
 
 export default function CompleteScreen() {
-  const params = useLocalSearchParams<{ xp?: string; accuracy?: string; kind?: string; passed?: string; failed?: string }>();
+  const params = useLocalSearchParams<{
+    xp?: string;
+    accuracy?: string;
+    kind?: string;
+    passed?: string;
+    failed?: string;
+    stars?: string;
+    sticker?: string;
+    stickerNew?: string;
+    page?: string;
+    stage?: string;
+  }>();
   const { state } = useProgress();
   const now = Date.now();
   const failed = params.failed === '1';
@@ -21,6 +37,11 @@ export default function CompleteScreen() {
     Animated.spring(pop, { toValue: 1, friction: 4, useNativeDriver: true }).start();
   }, [pop]);
 
+  const sticker = STICKER_PAGES.flatMap((p) => p.stickers).find((s) => s.wordId === params.sticker);
+  const stickerInfo = sticker ? stickerWord(sticker) : undefined;
+  const pageUnit = params.page ? units.find((u) => u.id === params.page) : undefined;
+  const grewTo = params.stage !== undefined ? STAGES[Number(params.stage)] : undefined;
+  const rewardsReady = readyRewardCount(state, now);
   const today = xpToday(state, now);
   const goal = state.settings.dailyGoal;
 
@@ -52,6 +73,48 @@ export default function CompleteScreen() {
           <Text style={styles.detail}>Practise to earn hearts back, then try again.</Text>
         ) : checkpointFailed ? (
           <Text style={styles.detail}>You need 80% to pass. Review the unit and try again.</Text>
+        ) : null}
+
+        {!failed && params.stars ? (
+          <Text style={styles.stars} testID="stars-earned">
+            {'⭐'.repeat(Math.min(3, Number(params.stars)))} +{params.stars} {Number(params.stars) === 1 ? 'star' : 'stars'}
+          </Text>
+        ) : null}
+
+        {sticker && stickerInfo ? (
+          <Pressable
+            testID="sticker-earned"
+            style={styles.sticker}
+            onPress={() => state.settings.sound && speak(stickerInfo.hanzi)}
+          >
+            <Text style={styles.stickerEmoji}>{sticker.emoji}</Text>
+            <View style={styles.stickerText}>
+              <Text style={styles.stickerTag}>{params.stickerNew === '1' ? 'New sticker!' : 'Another sticker!'}</Text>
+              <Text style={styles.stickerHanzi}>
+                {stickerInfo.hanzi} <Text style={styles.stickerSub}>{stickerInfo.jyutping}</Text>
+              </Text>
+              <Text style={styles.stickerSub}>{stickerInfo.english}</Text>
+            </View>
+          </Pressable>
+        ) : null}
+        {pageUnit ? (
+          <Text style={styles.bonus}>📖 {pageUnit.title} sticker page complete! Bonus stars included.</Text>
+        ) : null}
+
+        {state.mascot && grewTo ? (
+          <Text style={styles.bonus} testID="buddy-grew">
+            {mascotEmoji(state)} {state.mascot.name} {params.stage === '1' ? 'hatched!' : `grew into a ${grewTo.name}!`} {grewTo.accessory}
+          </Text>
+        ) : state.mascot && !failed ? (
+          <Text style={styles.cheer}>
+            {mascotEmoji(state)} {state.mascot.name}: {cheer(now).hanzi} ({cheer(now).english})
+          </Text>
+        ) : null}
+
+        {rewardsReady > 0 ? (
+          <Pressable testID="reward-ready" style={styles.reward} onPress={() => router.replace('/rewards')}>
+            <Text style={styles.rewardText}>🎁 A reward is ready to claim! Tap to see it.</Text>
+          </Pressable>
         ) : null}
 
         {!failed ? (
@@ -159,6 +222,67 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 20,
     fontWeight: '800',
+  },
+  stars: {
+    color: theme.colors.xp,
+    fontSize: 22,
+    fontWeight: '900',
+  },
+  sticker: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(3),
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    borderWidth: 2,
+    borderColor: theme.colors.accent,
+    padding: theme.spacing(3),
+  },
+  stickerEmoji: {
+    fontSize: 44,
+  },
+  stickerText: {
+    flex: 1,
+  },
+  stickerTag: {
+    color: theme.colors.accent,
+    fontWeight: '800',
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  stickerHanzi: {
+    color: theme.colors.text,
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  stickerSub: {
+    color: theme.colors.textMuted,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  bonus: {
+    color: theme.colors.accent,
+    fontWeight: '800',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  cheer: {
+    color: theme.colors.text,
+    fontSize: 15,
+    textAlign: 'center',
+  },
+  reward: {
+    alignSelf: 'stretch',
+    backgroundColor: theme.colors.successBg,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing(3),
+  },
+  rewardText: {
+    color: theme.colors.success,
+    fontWeight: '800',
+    textAlign: 'center',
   },
   goal: {
     alignSelf: 'stretch',
