@@ -1,6 +1,10 @@
 import { Level, ProgressState, Unit } from '@/lib/types';
+import { units } from '@/lib/content';
 import { LEVEL_START_UNIT } from '@/lib/engine/difficulty';
+import { Rng } from '@/lib/engine/random';
 import { reviewWord } from '@/lib/engine/srs';
+import { stageIndex, starsForAccuracy } from '@/lib/mascot';
+import { isPageComplete, openUnitIds, PAGE_BONUS_STARS, pageFor, pickSticker, Sticker } from '@/lib/stickers';
 
 export const MAX_HEARTS = 5;
 export const HEART_REFILL_MS = 30 * 60 * 1000;
@@ -33,6 +37,11 @@ export function initialState(now: number = Date.now()): ProgressState {
     streak: { count: 0, lastDay: null, best: 0 },
     hearts: { count: MAX_HEARTS, updatedAt: now },
     words: {},
+    mascot: null,
+    stickers: {},
+    rewards: [],
+    totals: { stars: 0, lessons: 0, checkpoints: 0 },
+    parentPin: null,
   };
 }
 
@@ -127,6 +136,12 @@ export interface CompletionResult {
   state: ProgressState;
   xpEarned: number;
   passed: boolean;
+  starsEarned: number;
+  sticker?: { sticker: Sticker; isNew: boolean };
+  /** A sticker page was just filled; its bonus is included in starsEarned. */
+  pageCompleted?: string;
+  /** The buddy grew to this stage. */
+  newStage?: number;
 }
 
 export function completeLesson(
@@ -134,11 +149,13 @@ export function completeLesson(
   args: { kind: CompletionKind; id: string; unitIndex?: number; correct: number; total: number; mistakes: number },
   now: number,
   unitCount: number,
+  rng: Rng = Math.random,
 ): CompletionResult {
   const accuracy = args.total > 0 ? args.correct / args.total : 0;
   let next = state;
   let xpEarned = 0;
   let passed = true;
+  let starsEarned = 1;
 
   if (args.kind === 'lesson') {
     const prev = state.lessons[args.id] ?? { crowns: 0, bestAccuracy: 0 };
@@ -150,6 +167,7 @@ export function completeLesson(
       },
     };
     xpEarned = XP.lesson + (args.mistakes === 0 ? XP.perfectBonus : 0);
+    starsEarned = starsForAccuracy(accuracy);
   } else if (args.kind === 'checkpoint') {
     passed = accuracy >= CHECKPOINT_PASS;
     if (passed && args.unitIndex !== undefined) {
@@ -160,12 +178,58 @@ export function completeLesson(
       };
     }
     xpEarned = passed ? XP.checkpoint : XP.practice;
+    starsEarned = passed ? 3 : 1;
   } else {
     xpEarned = XP.practice;
     next = gainHeart(next, now);
   }
 
-  return { state: addXp(next, xpEarned, now), xpEarned, passed };
+  // Every finished session earns a sticker: from its unit, or from any open unit for practice.
+  const unitId =
+    args.unitIndex !== undefined ? units[args.unitIndex]?.id : pickFrom(openUnitIds(next), rng);
+  let sticker: CompletionResult['sticker'];
+  let pageCompleted: string | undefined;
+  const page = unitId ? pageFor(unitId) : undefined;
+  if (page) {
+    const picked = pickSticker(next, page.unitId, rng);
+    if (picked) {
+      const wasComplete = isPageComplete(next, page);
+      const isNew = !next.stickers[picked.wordId];
+      next = { ...next, stickers: { ...next.stickers, [picked.wordId]: (next.stickers[picked.wordId] ?? 0) + 1 } };
+      sticker = { sticker: picked, isNew };
+      if (!wasComplete && isPageComplete(next, page)) {
+        pageCompleted = page.unitId;
+        starsEarned += PAGE_BONUS_STARS;
+      }
+    }
+  }
+
+  next = {
+    ...next,
+    totals: {
+      stars: next.totals.stars + starsEarned,
+      lessons: next.totals.lessons + 1,
+      checkpoints: next.totals.checkpoints + (args.kind === 'checkpoint' && passed ? 1 : 0),
+    },
+  };
+
+  const stageBefore = stageIndex(state.xp);
+  const finalState = addXp(next, xpEarned, now);
+  const stageAfter = stageIndex(finalState.xp);
+
+  return {
+    state: finalState,
+    xpEarned,
+    passed,
+    starsEarned,
+    sticker,
+    pageCompleted,
+    newStage: stageAfter > stageBefore ? stageAfter : undefined,
+  };
+}
+
+function pickFrom<T>(items: T[], rng: Rng): T | undefined {
+  return items.length ? items[Math.floor(rng() * items.length)] : undefined;
 }
 
 // --- Unlocking --------------------------------------------------------------

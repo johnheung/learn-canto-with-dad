@@ -6,6 +6,7 @@ import { Screen } from '@/components/Screen';
 import { Button } from '@/components/Button';
 import { HeaderStats } from '@/components/HeaderStats';
 import { VoiceTip } from '@/components/VoiceTip';
+import { BuddyCard } from '@/components/BuddyCard';
 import { useProgress } from '@/lib/context/ProgressContext';
 import { checkpointId, units } from '@/lib/content';
 import {
@@ -145,6 +146,7 @@ export default function LearnScreen() {
       <HeaderStats />
       <ScrollView contentContainerStyle={styles.path}>
         <VoiceTip />
+        <BuddyCard />
         {units.map(renderUnit)}
       </ScrollView>
     </Screen>

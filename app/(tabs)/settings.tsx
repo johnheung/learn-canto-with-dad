@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { router } from 'expo-router';
 import { Screen } from '@/components/Screen';
 import { Button } from '@/components/Button';
 import { useProgress } from '@/lib/context/ProgressContext';
@@ -7,7 +8,6 @@ import { LEVELS } from '@/lib/engine/difficulty';
 import { DAILY_GOALS } from '@/lib/progress';
 import { ANDROID_VOICE_STEPS, speak, useCantoneseVoice } from '@/lib/speech';
 import { ScriptPreference } from '@/lib/types';
-import { confirm } from '@/lib/ui';
 import { theme } from '@/lib/theme';
 
 const SCRIPTS: { id: ScriptPreference; label: string }[] = [
@@ -45,7 +45,7 @@ function Segmented<T extends string | number>({
 }
 
 export default function SettingsScreen() {
-  const { state, updateSettings, reset } = useProgress();
+  const { state, updateSettings } = useProgress();
   const { settings } = state;
   const { voice, recheck } = useCantoneseVoice();
 
@@ -109,17 +109,12 @@ export default function SettingsScreen() {
           <Button label="Test voice · 你好" variant="secondary" onPress={() => speak('你好')} />
         </Section>
 
-        <Section title="Progress" detail="Everything is stored on this device only.">
-          <Button
-            testID="reset"
-            label="Reset all progress"
-            variant="danger"
-            onPress={async () => {
-              if (await confirm('Reset progress?', 'This deletes your XP, streak and lesson progress.', 'Reset')) {
-                await reset();
-              }
-            }}
-          />
+        <Section title="Buddy" detail={state.mascot ? `Rename ${state.mascot.name} or pick a different animal.` : 'Adopt a buddy that grows as you learn.'}>
+          <Button testID="edit-buddy" label={state.mascot ? 'Change buddy' : 'Adopt a buddy'} variant="secondary" onPress={() => router.push('/buddy')} />
+        </Section>
+
+        <Section title="Parent area" detail="Set rewards and when they unlock, or reset progress. Protected by a PIN. Everything is stored on this phone only.">
+          <Button testID="parent-area" label="Open parent area 🔒" variant="secondary" onPress={() => router.push('/parent')} />
         </Section>
 
         <Text style={styles.footer}>Romanisation: Jyutping (LSHK). Course content is pending review by a native speaker.</Text>

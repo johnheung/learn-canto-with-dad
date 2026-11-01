@@ -95,6 +95,36 @@ export interface Settings {
   voiceTipDismissed: boolean;
 }
 
+export type MascotSpecies = 'panda' | 'cat' | 'dog' | 'rabbit' | 'tiger' | 'dragon';
+
+export interface Mascot {
+  species: MascotSpecies;
+  name: string;
+}
+
+/** What a reward's progress is measured in. */
+export type RewardGoal = 'stars' | 'lessons' | 'streak' | 'words' | 'checkpoints';
+
+export interface Totals {
+  stars: number;
+  lessons: number;
+  checkpoints: number;
+}
+
+/** A real-life reward set by a parent, unlocked by reaching a goal. */
+export interface Reward {
+  id: string;
+  title: string;
+  goal: RewardGoal;
+  target: number;
+  /** Goal value when the reward was set (or last claimed, if repeating); progress counts from here. */
+  baseline: number;
+  /** Start again after each claim, e.g. a weekly treat. */
+  repeat: boolean;
+  /** Claim times, newest last. A non-repeating reward is done once claimed. */
+  claims: number[];
+}
+
 export interface ProgressState {
   onboarded: boolean;
   settings: Settings;
@@ -107,4 +137,12 @@ export interface ProgressState {
   streak: { count: number; lastDay: string | null; best: number };
   hearts: { count: number; updatedAt: number };
   words: Record<string, WordProgress>;
+  mascot: Mascot | null;
+  /** Sticker id → times collected. */
+  stickers: Record<string, number>;
+  rewards: Reward[];
+  /** Lifetime counters that reward goals are measured against. */
+  totals: Totals;
+  /** Parent PIN guarding rewards and resets. */
+  parentPin: string | null;
 }

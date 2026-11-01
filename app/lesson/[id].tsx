@@ -117,6 +117,10 @@ function LessonRunner({ id }: { id: string }) {
         accuracy: String(Math.round((correctCount / Math.max(1, originalCount)) * 100)),
         kind: ref.kind,
         passed: result.passed ? '1' : '0',
+        stars: String(result.starsEarned),
+        ...(result.sticker ? { sticker: result.sticker.sticker.wordId, stickerNew: result.sticker.isNew ? '1' : '0' } : {}),
+        ...(result.pageCompleted ? { page: result.pageCompleted } : {}),
+        ...(result.newStage !== undefined ? { stage: String(result.newStage) } : {}),
       },
     });
   };
