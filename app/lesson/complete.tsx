@@ -6,6 +6,7 @@ import { Screen } from '@/components/Screen';
 import { Button } from '@/components/Button';
 import { ProgressBar } from '@/components/ProgressBar';
 import { useProgress } from '@/lib/context/ProgressContext';
+import { goToTab } from '@/lib/navigation';
 import { units } from '@/lib/content';
 import { cheer, mascotEmoji, STAGES } from '@/lib/mascot';
 import { displayStreak, xpToday } from '@/lib/progress';
@@ -112,7 +113,7 @@ export default function CompleteScreen() {
         ) : null}
 
         {rewardsReady > 0 ? (
-          <Pressable testID="reward-ready" style={styles.reward} onPress={() => router.replace('/rewards')}>
+          <Pressable testID="reward-ready" style={styles.reward} onPress={() => goToTab('/rewards')}>
             <Text style={styles.rewardText}>🎁 A reward is ready to claim! Tap to see it.</Text>
           </Pressable>
         ) : null}
@@ -134,7 +135,7 @@ export default function CompleteScreen() {
           </View>
         </View>
       </ScrollView>
-      <Button testID="done" label="Continue" onPress={() => router.replace('/')} />
+      <Button testID="done" label="Continue" onPress={() => goToTab('/')} />
     </Screen>
   );
 }

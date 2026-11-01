@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { CantoText } from '@/components/CantoText';
 import { OptionCard, OptionState } from '@/components/OptionCard';
@@ -12,17 +12,29 @@ import { theme } from '@/lib/theme';
 export function MatchPairs({ exercise, script, sound, locked, onResult }: ExerciseProps<'match'>) {
   const left = useMemo(() => shuffle(exercise.pairs, Math.random), [exercise]);
   const right = useMemo(() => shuffle(exercise.pairs, Math.random), [exercise]);
-  const [pickedLeft, setPickedLeft] = useState<string | null>(null);
-  const [pickedRight, setPickedRight] = useState<string | null>(null);
-  const [matched, setMatched] = useState<string[]>([]);
+  const [pickedLeft, setPickedLeftState] = useState<string | null>(null);
+  const [pickedRight, setPickedRightState] = useState<string | null>(null);
+  const [matched, setMatchedState] = useState<string[]>([]);
+  // Latest picks, so fast taps don't act on a stale selection.
+  const picks = useRef<{ left: string | null; right: string | null; matched: string[] }>({ left: null, right: null, matched: [] });
+  const setPickedLeft = (id: string | null) => {
+    picks.current.left = id;
+    setPickedLeftState(id);
+  };
+  const setPickedRight = (id: string | null) => {
+    picks.current.right = id;
+    setPickedRightState(id);
+  };
   const [wrong, setWrong] = useState<string[]>([]);
   const [mistakes, setMistakes] = useState(0);
 
   const tryMatch = (l: string | null, r: string | null) => {
     if (!l || !r) return;
     if (l === r) {
-      const next = [...matched, l];
-      setMatched(next);
+      if (picks.current.matched.includes(l)) return;
+      const next = [...picks.current.matched, l];
+      picks.current.matched = next;
+      setMatchedState(next);
       if (next.length === exercise.pairs.length) {
         feedbackHaptic(true);
         onResult(true);
@@ -58,7 +70,7 @@ export function MatchPairs({ exercise, script, sound, locked, onResult }: Exerci
                 tapHaptic();
                 if (sound) speak(w.hanzi);
                 setPickedLeft(w.id);
-                tryMatch(w.id, pickedRight);
+                tryMatch(w.id, picks.current.right);
               }}
             >
               <CantoText hanzi={w.hanzi} jyutping={w.jyutping} mode={script} size="sm" revealable={false} />
@@ -76,7 +88,7 @@ export function MatchPairs({ exercise, script, sound, locked, onResult }: Exerci
               onPress={() => {
                 tapHaptic();
                 setPickedRight(w.id);
-                tryMatch(pickedLeft, w.id);
+                tryMatch(picks.current.left, w.id);
               }}
             >
               <Text style={styles.english}>{w.english}</Text>

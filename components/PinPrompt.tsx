@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { feedbackHaptic, tapHaptic } from '@/lib/ui';
 import { theme } from '@/lib/theme';
@@ -18,7 +18,13 @@ interface PinPromptProps {
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'cancel', '0', 'back'];
 
 export function PinPrompt({ visible, mode, expected, title, onSuccess, onCancel }: PinPromptProps) {
-  const [digits, setDigits] = useState('');
+  const [digits, setDigitsState] = useState('');
+  // Latest digits, so fast taps each add to the previous one.
+  const digitsRef = useRef('');
+  const setDigits = (d: string) => {
+    digitsRef.current = d;
+    setDigitsState(d);
+  };
   const [first, setFirst] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,8 +57,8 @@ export function PinPrompt({ visible, mode, expected, title, onSuccess, onCancel 
   const press = (key: string) => {
     tapHaptic();
     if (key === 'cancel') return onCancel();
-    if (key === 'back') return setDigits((d) => d.slice(0, -1));
-    const next = digits + key;
+    if (key === 'back') return setDigits(digitsRef.current.slice(0, -1));
+    const next = digitsRef.current + key;
     if (next.length === PIN_LENGTH) entered(next);
     else setDigits(next);
   };

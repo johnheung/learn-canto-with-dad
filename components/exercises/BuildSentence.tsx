@@ -27,7 +27,7 @@ function WordBank<T>({
 }: {
   bank: T[];
   chosen: number[];
-  setChosen: (c: number[]) => void;
+  setChosen: React.Dispatch<React.SetStateAction<number[]>>;
   render: (item: T) => React.ReactNode;
   onTap?: (item: T) => void;
   locked: boolean;
@@ -40,7 +40,7 @@ function WordBank<T>({
             key={`a${i}`}
             disabled={locked}
             style={styles.chip}
-            onPress={() => setChosen(chosen.filter((c) => c !== i))}
+            onPress={() => setChosen((cur) => cur.filter((c) => c !== i))}
           >
             {render(bank[i])}
           </Pressable>
@@ -58,7 +58,7 @@ function WordBank<T>({
               onPress={() => {
                 tapHaptic();
                 onTap?.(item);
-                setChosen([...chosen, i]);
+                setChosen((cur) => (cur.includes(i) ? cur : [...cur, i]));
               }}
             >
               <View style={used ? styles.hidden : undefined}>{render(item)}</View>

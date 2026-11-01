@@ -10,6 +10,7 @@ import { ProgressBar } from '@/components/ProgressBar';
 import { StatPill } from '@/components/StatPills';
 import { ExerciseView } from '@/components/exercises';
 import { useProgress } from '@/lib/context/ProgressContext';
+import { goToTab } from '@/lib/navigation';
 import { resolveLesson } from '@/lib/content';
 import { resolveScript } from '@/lib/engine/difficulty';
 import { planLesson, MIN_PRACTICE_WORDS } from '@/lib/engine/plan';
@@ -78,7 +79,7 @@ function LessonRunner({ id }: { id: string }) {
       <Message
         title="Out of hearts"
         detail="Practise words you've learned to earn a heart, or wait for them to refill."
-        onClose={() => router.replace('/')}
+        onClose={() => goToTab('/')}
       />
     );
   }
