@@ -55,18 +55,20 @@ npm run typecheck
 
 ## Building and deploying
 
-Deployment works the same way as in the Fitness App: EAS Build, started from GitHub Actions.
+Builds run on EAS Build from GitHub Actions. They need an `EXPO_TOKEN` secret in this repo (Settings → Secrets and variables → Actions).
 
-1. Add an `EXPO_TOKEN` secret to this repo (Settings → Secrets and variables → Actions).
-2. Open **Actions → EAS Build (Android) → Run workflow** and pick a profile:
-   - `preview`: an installable APK for internal testing
-   - `production`: a store build with automatic version numbers
+- **Automatically:** every merged pull request (any push to `main`, except README/Markdown-only changes) builds a `preview` APK.
+- **Manually:** open **Actions → EAS Build (Android) → Run workflow** and pick a profile:
+  - `preview`: an installable APK for internal testing
+  - `production`: a store build with automatic version numbers
+
+When a build finishes, its run page on GitHub shows an **install link** in the summary.
 
 The profiles are in `eas.json`. The workflow is in `.github/workflows/eas-build.yml`.
 
 ### Installing the APK on your phone
 
-1. When the `preview` run finishes, open its log. The **Build on EAS** step ends with a link to the build page on expo.dev.
+1. When the `preview` run finishes, open it on GitHub (Actions tab). The summary at the top shows the install link; it's also at the end of the **Build on EAS** step's log.
 2. Open that link on your phone, or scan the build page's QR code, and tap **Install** to download the `.apk`.
 3. Open the downloaded file. The first time, Android asks you to allow your browser to **Install unknown apps**. Allow it, then install.
 
