@@ -8,6 +8,7 @@ import { units } from '@/lib/content';
 import { LEVELS } from '@/lib/engine/difficulty';
 import { MAX_BOX } from '@/lib/engine/srs';
 import { dayKey, displayStreak, unitProgress, xpToday } from '@/lib/progress';
+import { useLayout } from '@/lib/layout';
 import { theme } from '@/lib/theme';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -93,8 +94,9 @@ function Tile({
   value: number;
   label: string;
 }) {
+  const { isTablet } = useLayout();
   return (
-    <View style={styles.tile}>
+    <View style={[styles.tile, { flexBasis: isTablet ? '15%' : '30%' }]}>
       <Ionicons name={icon} size={22} color={color} />
       <Text style={styles.tileValue}>{value}</Text>
       <Text style={styles.tileLabel}>{label}</Text>

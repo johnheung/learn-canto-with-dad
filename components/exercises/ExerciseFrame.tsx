@@ -2,6 +2,7 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Exercise, ScriptMode } from '@/lib/types';
 import { Button } from '@/components/Button';
+import { useLayout } from '@/lib/layout';
 import { theme } from '@/lib/theme';
 
 export interface ExerciseProps<K extends Exercise['kind']> {
@@ -23,11 +24,12 @@ interface FrameProps {
 }
 
 export function ExerciseFrame({ title, badge, children, canCheck, onCheck, locked }: FrameProps) {
+  const { scale } = useLayout();
   return (
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {badge ? <Text style={styles.badge}>{badge}</Text> : null}
-        <Text style={styles.title}>{title}</Text>
+        <Text style={[styles.title, { fontSize: 22 * scale }]}>{title}</Text>
         {children}
       </ScrollView>
       {onCheck && !locked ? (

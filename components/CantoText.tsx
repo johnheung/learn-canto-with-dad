@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ScriptMode } from '@/lib/types';
 import { syllables } from '@/lib/engine/grading';
+import { useLayout } from '@/lib/layout';
 import { theme } from '@/lib/theme';
 
 interface CantoTextProps {
@@ -38,7 +39,8 @@ export function CantoText({
   revealable = true,
 }: CantoTextProps) {
   const [revealed, setRevealed] = useState(false);
-  const sz = SIZES[size];
+  const { scale } = useLayout();
+  const sz = { main: SIZES[size].main * scale, sub: SIZES[size].sub * scale };
   const textColor = color ?? theme.colors.text;
 
   const jp =

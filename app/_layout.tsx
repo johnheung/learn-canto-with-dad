@@ -4,12 +4,14 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { ProgressProvider } from '@/lib/context/ProgressContext';
+import { applyOrientationPolicy } from '@/lib/orientation';
 import { detectCantoneseVoice } from '@/lib/speech';
 import { theme } from '@/lib/theme';
 
 export default function RootLayout() {
   useEffect(() => {
     detectCantoneseVoice();
+    applyOrientationPolicy();
   }, []);
 
   return (

@@ -7,6 +7,7 @@ import { sentenceAnswerTokens, tokensMatch } from '@/lib/engine/grading';
 import { speak } from '@/lib/speech';
 import { ScriptMode, Token } from '@/lib/types';
 import { tapHaptic } from '@/lib/ui';
+import { useLayout } from '@/lib/layout';
 import { theme } from '@/lib/theme';
 
 function sentenceText(tokens: Token[]) {
@@ -94,25 +95,34 @@ export function BuildEnglish({ exercise, script, sound, locked, onResult }: Exer
         chosen={chosen}
         setChosen={setChosen}
         locked={locked}
-        render={(t) => <Text style={styles.chipText}>{t}</Text>}
+        render={(t) => <ChipText text={t} />}
       />
     </ExerciseFrame>
   );
 }
 
+/** Word-bank English word, larger on tablets. */
+function ChipText({ text }: { text: string }) {
+  const { scale } = useLayout();
+  return <Text style={[styles.chipText, { fontSize: 16 * scale }]}>{text}</Text>;
+}
+
 function TokenChip({ token, script }: { token: Token; script: ScriptMode }) {
-  if (script === 'characters') return <Text style={styles.chipHanzi}>{token.hanzi}</Text>;
+  const { scale } = useLayout();
+  const hanzi = [styles.chipHanzi, { fontSize: 20 * scale }];
+  const roman = [styles.chipText, { fontSize: 16 * scale }];
+  if (script === 'characters') return <Text style={hanzi}>{token.hanzi}</Text>;
   if (script === 'jyutping') {
     return (
       <View style={styles.center}>
-        <Text style={styles.chipText}>{token.jyutping}</Text>
+        <Text style={roman}>{token.jyutping}</Text>
         <Text style={styles.chipSub}>{token.hanzi}</Text>
       </View>
     );
   }
   return (
     <View style={styles.center}>
-      <Text style={styles.chipHanzi}>{token.hanzi}</Text>
+      <Text style={hanzi}>{token.hanzi}</Text>
       <Text style={styles.chipSub}>{token.jyutping}</Text>
     </View>
   );
