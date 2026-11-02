@@ -7,8 +7,10 @@ import { Button } from '@/components/Button';
 import { HeaderStats } from '@/components/HeaderStats';
 import { VoiceTip } from '@/components/VoiceTip';
 import { BuddyCard } from '@/components/BuddyCard';
+import { TodayCard } from '@/components/TodayCard';
 import { useProgress } from '@/lib/context/ProgressContext';
 import { checkpointId, units } from '@/lib/content';
+import { useLayout } from '@/lib/layout';
 import {
   crownsFor,
   currentHearts,
@@ -27,7 +29,10 @@ const OFFSETS = [0, 44, 70, 44, 0, -44, -70, -44];
 
 export default function LearnScreen() {
   const { state } = useProgress();
+  const layout = useLayout();
   const [selected, setSelected] = useState<string | null>(null);
+  // Bigger lesson circles on tablets.
+  const nodeSize = Math.round(72 * layout.scale);
   const now = Date.now();
   const outOfHearts = state.settings.hearts && currentHearts(state, now) === 0;
   const heartWait = nextHeartIn(state, now);
@@ -76,20 +81,26 @@ export default function LearnScreen() {
 
           return (
             <View key={node.id} style={styles.nodeRow}>
-              <View style={{ transform: [{ translateX: OFFSETS[i % OFFSETS.length] }], alignItems: 'center' }}>
+              <View style={{ transform: [{ translateX: OFFSETS[i % OFFSETS.length] * layout.scale }], alignItems: 'center' }}>
                 <Pressable
                   testID={`node-${node.id}`}
                   accessibilityLabel={node.title}
                   onPress={() => setSelected(isSelected ? null : node.id)}
                   style={({ pressed }) => [
                     styles.node,
-                    { backgroundColor: color, borderBottomColor: 'rgba(0,0,0,0.3)' },
+                    {
+                      width: nodeSize,
+                      height: nodeSize - 6,
+                      borderRadius: nodeSize / 2,
+                      backgroundColor: color,
+                      borderBottomColor: 'rgba(0,0,0,0.3)',
+                    },
                     pressed && styles.nodePressed,
                   ]}
                 >
                   <Ionicons
                     name={!open ? 'lock-closed' : isCheckpoint ? 'trophy' : done ? 'checkmark' : 'star'}
-                    size={30}
+                    size={Math.round(30 * layout.scale)}
                     color="#FFFFFF"
                   />
                 </Pressable>
@@ -141,6 +152,25 @@ export default function LearnScreen() {
     );
   };
 
+  // Wide screens: buddy and today's progress in a sidebar beside the path.
+  if (layout.isWide) {
+    return (
+      <Screen wide>
+        <HeaderStats />
+        <View style={styles.columns}>
+          <ScrollView style={styles.sidebar} contentContainerStyle={styles.sidebarContent}>
+            <VoiceTip />
+            <BuddyCard />
+            <TodayCard />
+          </ScrollView>
+          <ScrollView style={styles.main} contentContainerStyle={styles.path}>
+            {units.map(renderUnit)}
+          </ScrollView>
+        </View>
+      </Screen>
+    );
+  }
+
   return (
     <Screen>
       <HeaderStats />
@@ -154,6 +184,23 @@ export default function LearnScreen() {
 }
 
 const styles = StyleSheet.create({
+  columns: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  sidebar: {
+    width: 360,
+    flexGrow: 0,
+    borderRightWidth: 2,
+    borderRightColor: theme.colors.surfaceAlt,
+  },
+  sidebarContent: {
+    padding: theme.spacing(4),
+    gap: theme.spacing(4),
+  },
+  main: {
+    flex: 1,
+  },
   path: {
     padding: theme.spacing(4),
     paddingBottom: theme.spacing(20),
@@ -208,9 +255,6 @@ const styles = StyleSheet.create({
     gap: theme.spacing(3),
   },
   node: {
-    width: 72,
-    height: 66,
-    borderRadius: 36,
     borderBottomWidth: 6,
     alignItems: 'center',
     justifyContent: 'center',

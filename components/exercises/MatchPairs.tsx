@@ -6,10 +6,12 @@ import { ExerciseFrame, ExerciseProps } from '@/components/exercises/ExerciseFra
 import { shuffle } from '@/lib/engine/random';
 import { speak } from '@/lib/speech';
 import { feedbackHaptic, tapHaptic } from '@/lib/ui';
+import { useLayout } from '@/lib/layout';
 import { theme } from '@/lib/theme';
 
 /** Tap a Cantonese word and its meaning. Finishes itself once every pair is found. */
 export function MatchPairs({ exercise, script, sound, locked, onResult }: ExerciseProps<'match'>) {
+  const { scale } = useLayout();
   const left = useMemo(() => shuffle(exercise.pairs, Math.random), [exercise]);
   const right = useMemo(() => shuffle(exercise.pairs, Math.random), [exercise]);
   const [pickedLeft, setPickedLeftState] = useState<string | null>(null);
@@ -91,7 +93,7 @@ export function MatchPairs({ exercise, script, sound, locked, onResult }: Exerci
                 tryMatch(picks.current.left, w.id);
               }}
             >
-              <Text style={styles.english}>{w.english}</Text>
+              <Text style={[styles.english, { fontSize: 15 * scale }]}>{w.english}</Text>
             </OptionCard>
           ))}
         </View>

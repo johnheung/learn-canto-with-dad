@@ -22,6 +22,7 @@ A mobile app for learning Cantonese a few minutes a day. It's built with Expo (R
 - **Buddy**: pick an animal (🐼 🐱 🐶 🐰 🐯 🐲) and name it. It hatches after the first lesson and grows through 5 stages with XP. Its mood shows whether you practised today, and it cheers you on in Cantonese.
 - **Stars and stickers**: 1–3 stars per lesson by accuracy. Every finished session earns an emoji sticker of a word from that unit. Filling a unit's page earns 5 bonus stars.
 - **Rewards from a parent**: in the PIN-locked **Settings → Parent area**, set real rewards and when they unlock: earn stars, finish lessons, reach a streak, learn new words, or pass unit tests. Progress counts from when the reward is set; streaks use the current streak. Rewards can repeat. The learner taps **Claim** on the Rewards tab, and the parent confirms with the PIN.
+- **Phones and tablets**: phones stay in portrait. Tablets rotate freely and get larger text, with two columns in landscape (the path beside the buddy, and rewards beside the sticker book). The rules are in `lib/layout.ts`.
 - **Audio**: the phone's Cantonese text-to-speech voice (`yue-HK` / `zh-HK`). If none is installed, the Learn screen shows a one-time tip and Settings gives the steps: *Settings → System → Languages → Text-to-speech output → Speech Services by Google → ⚙ → Install voice data → Cantonese (Hong Kong)*. Then tap **Check again** in the app's Settings.
 
 ## Difficulty
@@ -55,18 +56,20 @@ npm run typecheck
 
 ## Building and deploying
 
-Deployment works the same way as in the Fitness App: EAS Build, started from GitHub Actions.
+Builds run on EAS Build from GitHub Actions. They need an `EXPO_TOKEN` secret in this repo (Settings → Secrets and variables → Actions).
 
-1. Add an `EXPO_TOKEN` secret to this repo (Settings → Secrets and variables → Actions).
-2. Open **Actions → EAS Build (Android) → Run workflow** and pick a profile:
-   - `preview`: an installable APK for internal testing
-   - `production`: a store build with automatic version numbers
+- **Automatically:** every merged pull request (any push to `main`, except README/Markdown-only changes) builds a `preview` APK.
+- **Manually:** open **Actions → EAS Build (Android) → Run workflow** and pick a profile:
+  - `preview`: an installable APK for internal testing
+  - `production`: a store build with automatic version numbers
+
+When a build finishes, its run page on GitHub shows an **install link** in the summary.
 
 The profiles are in `eas.json`. The workflow is in `.github/workflows/eas-build.yml`.
 
 ### Installing the APK on your phone
 
-1. When the `preview` run finishes, open its log. The **Build on EAS** step ends with a link to the build page on expo.dev.
+1. When the `preview` run finishes, open it on GitHub (Actions tab). The summary at the top shows the install link; it's also at the end of the **Build on EAS** step's log.
 2. Open that link on your phone, or scan the build page's QR code, and tap **Install** to download the `.apk`.
 3. Open the downloaded file. The first time, Android asks you to allow your browser to **Install unknown apps**. Allow it, then install.
 
