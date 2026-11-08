@@ -8,6 +8,7 @@ import { HeaderStats } from '@/components/HeaderStats';
 import { VoiceTip } from '@/components/VoiceTip';
 import { BuddyCard } from '@/components/BuddyCard';
 import { TodayCard } from '@/components/TodayCard';
+import { LearnModeToggle } from '@/components/LearnModeToggle';
 import { useProgress } from '@/lib/context/ProgressContext';
 import { checkpointId, units } from '@/lib/content';
 import { useLayout } from '@/lib/layout';
@@ -37,9 +38,11 @@ export default function LearnScreen() {
   const outOfHearts = state.settings.hearts && currentHearts(state, now) === 0;
   const heartWait = nextHeartIn(state, now);
 
-  const start = (id: string) => {
+  const gameMode = state.settings.learnMode === 'game';
+  /** Unit tests are always questions; other lessons follow the Questions/Game toggle. */
+  const start = (id: string, isCheckpoint = false) => {
     setSelected(null);
-    router.push(`/lesson/${id}`);
+    router.push(gameMode && !isCheckpoint ? `/game/${id}` : `/lesson/${id}`);
   };
 
   const renderUnit = (unit: Unit) => {
@@ -119,7 +122,7 @@ export default function LearnScreen() {
                     <Text style={styles.popDetail}>
                       {isCheckpoint ? 'Finish every lesson in this unit first.' : 'Finish the lesson before this one first.'}
                     </Text>
-                  ) : outOfHearts ? (
+                  ) : outOfHearts && (isCheckpoint || !gameMode) ? (
                     <>
                       <Text style={styles.popDetail}>
                         You're out of hearts. Practise to earn one
@@ -133,13 +136,13 @@ export default function LearnScreen() {
                         {isCheckpoint
                           ? passed
                             ? 'Passed! Retake it any time.'
-                            : 'Score 80% to unlock the next unit.'
+                            : `Score 80% to unlock the next unit.${gameMode ? ' Unit tests are always questions.' : ''}`
                           : `Level ${Math.min(crowns + 1, MAX_CROWNS)} of ${MAX_CROWNS}${crowns >= MAX_CROWNS ? ' · mastered' : ''}`}
                       </Text>
                       <Button
                         testID="start-lesson"
-                        label={`Start +${isCheckpoint ? XP.checkpoint : XP.lesson} XP`}
-                        onPress={() => start(node.id)}
+                        label={`${gameMode && !isCheckpoint ? '🏮 Play' : 'Start'} +${isCheckpoint ? XP.checkpoint : XP.lesson} XP`}
+                        onPress={() => start(node.id, isCheckpoint)}
                       />
                     </>
                   )}
@@ -157,6 +160,9 @@ export default function LearnScreen() {
     return (
       <Screen wide>
         <HeaderStats />
+        <View style={styles.toggle}>
+          <LearnModeToggle />
+        </View>
         <View style={styles.columns}>
           <ScrollView style={styles.sidebar} contentContainerStyle={styles.sidebarContent}>
             <VoiceTip />
@@ -174,6 +180,9 @@ export default function LearnScreen() {
   return (
     <Screen>
       <HeaderStats />
+      <View style={styles.toggle}>
+        <LearnModeToggle />
+      </View>
       <ScrollView contentContainerStyle={styles.path}>
         <VoiceTip />
         <BuddyCard />
@@ -184,6 +193,10 @@ export default function LearnScreen() {
 }
 
 const styles = StyleSheet.create({
+  toggle: {
+    paddingHorizontal: theme.spacing(4),
+    paddingTop: theme.spacing(3),
+  },
   columns: {
     flex: 1,
     flexDirection: 'row',

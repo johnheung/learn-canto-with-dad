@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { Level, MascotSpecies, ProgressState, Settings } from '@/lib/types';
+import { Level, MascotSpecies, ProgressState, SessionLog, Settings } from '@/lib/types';
 import { clearState, loadState, saveState } from '@/lib/storage';
 import { units } from '@/lib/content';
 import { LEVEL_START_UNIT } from '@/lib/engine/difficulty';
@@ -9,8 +9,10 @@ import {
   completeLesson,
   completeOnboarding,
   initialState,
+  logSession,
   loseHeart,
   recordAnswer,
+  recordGameScore,
 } from '@/lib/progress';
 import { addReward, claimReward, deleteReward, RewardDraft, updateReward } from '@/lib/rewards';
 
@@ -35,6 +37,9 @@ interface ProgressContextValue {
   saveReward: (draft: RewardDraft, id?: string) => void;
   removeReward: (id: string) => void;
   claim: (id: string) => void;
+  logSession: (session: Omit<SessionLog, 'id'>) => void;
+  /** Returns whether the score is a new best for the lesson. */
+  recordGameScore: (lessonId: string, score: number) => boolean;
 }
 
 const ProgressContext = createContext<ProgressContextValue | undefined>(undefined);
@@ -123,6 +128,20 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
 
   const claim = useCallback((id: string) => apply((s) => claimReward(s, id, Date.now())), [apply]);
 
+  const logSessionAction = useCallback(
+    (session: Omit<SessionLog, 'id'>) => apply((s) => logSession(s, session)),
+    [apply],
+  );
+
+  const recordGameScoreAction = useCallback(
+    (lessonId: string, score: number) => {
+      const result = recordGameScore(stateRef.current, lessonId, score);
+      apply(() => result.state);
+      return result.best;
+    },
+    [apply],
+  );
+
   const value = useMemo(
     () => ({
       state,
@@ -138,8 +157,26 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
       saveReward,
       removeReward,
       claim,
+      logSession: logSessionAction,
+      recordGameScore: recordGameScoreAction,
     }),
-    [state, loading, onboard, updateSettings, answer, loseHeartAction, complete, reset, adoptMascot, setParentPin, saveReward, removeReward, claim],
+    [
+      state,
+      loading,
+      onboard,
+      updateSettings,
+      answer,
+      loseHeartAction,
+      complete,
+      reset,
+      adoptMascot,
+      setParentPin,
+      saveReward,
+      removeReward,
+      claim,
+      logSessionAction,
+      recordGameScoreAction,
+    ],
   );
 
   return <ProgressContext.Provider value={value}>{children}</ProgressContext.Provider>;

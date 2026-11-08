@@ -10,7 +10,8 @@ export function TypeAnswer({ exercise, locked, onResult }: ExerciseProps<'type'>
   const [text, setText] = useState('');
   const { word, requireTones } = exercise;
 
-  const check = () => onResult(jyutpingMatches(text, word.jyutping, requireTones), `${word.jyutping} (${word.hanzi})`);
+  const check = () =>
+    onResult(jyutpingMatches(text, word.jyutping, requireTones), `${word.jyutping} (${word.hanzi})`, text.trim());
 
   return (
     <ExerciseFrame title="Type this in Jyutping" locked={locked} canCheck={text.trim().length > 0} onCheck={check}>

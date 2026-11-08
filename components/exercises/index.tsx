@@ -12,7 +12,7 @@ interface Props {
   script: ScriptMode;
   sound: boolean;
   locked: boolean;
-  onResult: (correct: boolean, correction?: string) => void;
+  onResult: (correct: boolean, correction?: string, given?: string) => void;
 }
 
 export function ExerciseView({ exercise, ...rest }: Props) {

@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { StatPill } from '@/components/StatPills';
 import { useProgress } from '@/lib/context/ProgressContext';
-import { currentHearts, displayStreak } from '@/lib/progress';
+import { currentHearts, displayStreak, starBalance } from '@/lib/progress';
 import { theme } from '@/lib/theme';
 
 export function HeaderStats() {
@@ -14,7 +14,7 @@ export function HeaderStats() {
         <Text style={styles.flagText}>粵</Text>
       </View>
       <StatPill testID="streak" icon="flame" color={theme.colors.streak} value={displayStreak(state, now)} />
-      <StatPill testID="stars" icon="star" color={theme.colors.xp} value={state.totals.stars} />
+      <StatPill testID="stars" icon="star" color={theme.colors.xp} value={starBalance(state)} />
       <StatPill
         icon="heart"
         color={theme.colors.heart}

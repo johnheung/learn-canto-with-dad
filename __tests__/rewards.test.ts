@@ -2,14 +2,16 @@ import { describe, expect, it } from '@jest/globals';
 import { getWord, units } from '@/lib/content';
 import { seededRng } from '@/lib/engine/random';
 import { mood, nextStage, stageIndex, STAGES, starsForAccuracy } from '@/lib/mascot';
-import { completeLesson, initialState } from '@/lib/progress';
+import { completeLesson, initialState, starBalance } from '@/lib/progress';
 import {
   addReward,
   claimReward,
   deleteReward,
   describeGoal,
+  describeRemaining,
   readyRewardCount,
   rewardProgress,
+  rewardRemaining,
   rewardStatus,
   updateReward,
 } from '@/lib/rewards';
@@ -98,11 +100,11 @@ describe('stars and buddy', () => {
 });
 
 describe('rewards', () => {
-  it('counts lessons from when the reward was set and unlocks at the target', () => {
+  it('counts everything she has done, even before the reward existed', () => {
     let s = finish(initialState(T0)).state; // one lesson before the reward exists
-    s = addReward(s, { title: 'Ice cream', goal: 'lessons', target: 2, repeat: false }, T0);
+    s = addReward(s, { title: 'Ice cream', goal: 'lessons', target: 3, repeat: false }, T0);
     const r = () => s.rewards[0];
-    expect(rewardProgress(s, r(), T0)).toBe(0);
+    expect(rewardProgress(s, r(), T0)).toBe(1);
     s = finish(s).state;
     expect(rewardStatus(s, r(), T0)).toBe('in-progress');
     s = finish(s).state;
@@ -142,7 +144,7 @@ describe('rewards', () => {
     expect(rewardStatus(s, s.rewards[0], T0 + 5 * DAY)).toBe('in-progress');
   });
 
-  it('can be edited: a new target keeps progress, a new goal type starts from now', () => {
+  it('can be edited: a new target keeps progress, a new goal type counts everything so far', () => {
     let s = addReward(initialState(T0), { title: 'A', goal: 'lessons', target: 5, repeat: false }, T0);
     s = finish(s).state;
     const id = s.rewards[0].id;
@@ -159,7 +161,47 @@ describe('rewards', () => {
     expect(describeGoal('lessons', 10)).toBe('Finish 10 lessons');
     expect(describeGoal('lessons', 1)).toBe('Finish 1 lesson');
     expect(describeGoal('streak', 7)).toBe('Reach a 7-day streak');
-    expect(describeGoal('stars', 30)).toBe('Earn 30 stars');
+    expect(describeGoal('stars', 30)).toBe('Costs 30 stars');
+    expect(describeRemaining('stars', 18)).toBe('18 more ⭐');
+    expect(describeRemaining('lessons', 1)).toBe('1 more lesson');
     expect(describeGoal('checkpoints', 2)).toBe('Pass 2 unit tests');
+  });
+
+  it('star rewards use every star ever earned and spend them when claimed', () => {
+    let s = initialState(T0);
+    for (let i = 0; i < 4; i++) s = finish(s, { seed: i }).state; // 12 stars before any reward
+    expect(starBalance(s)).toBe(12);
+    s = addReward(s, { title: 'Ice cream', goal: 'stars', target: 10, repeat: false }, T0);
+    s = addReward(s, { title: 'Toy', goal: 'stars', target: 5, repeat: false }, T0);
+    const [ice, toy] = s.rewards;
+    expect(rewardStatus(s, ice, T0)).toBe('ready');
+    expect(rewardStatus(s, toy, T0)).toBe('ready');
+    s = claimReward(s, ice.id, T0);
+    expect(starBalance(s)).toBe(2);
+    expect(s.totals.stars).toBe(12); // lifetime total is unchanged
+    // The toy is no longer affordable, and shows how many more are needed.
+    expect(rewardStatus(s, s.rewards[1], T0)).toBe('in-progress');
+    expect(rewardRemaining(s, s.rewards[1], T0)).toBe(3);
+    s = claimReward(s, toy.id, T0); // can't claim what she can't afford
+    expect(starBalance(s)).toBe(2);
+    expect(s.rewards[1].claims).toHaveLength(0);
+  });
+
+  it('a repeating star reward can be bought again whenever she can afford it', () => {
+    let s = addReward(initialState(T0), { title: 'Sweets', goal: 'stars', target: 3, repeat: true }, T0);
+    for (let i = 0; i < 2; i++) s = finish(s, { seed: i }).state; // 6 stars
+    s = claimReward(s, s.rewards[0].id, T0);
+    expect(rewardStatus(s, s.rewards[0], T0)).toBe('ready'); // 3 left: enough again
+    s = claimReward(s, s.rewards[0].id, T0);
+    expect(starBalance(s)).toBe(0);
+    expect(s.rewards[0].claims).toHaveLength(2);
+    expect(rewardStatus(s, s.rewards[0], T0)).toBe('in-progress');
+  });
+
+  it('existing star rewards made with an old baseline now use the whole balance', () => {
+    let s = initialState(T0);
+    for (let i = 0; i < 2; i++) s = finish(s, { seed: i }).state; // 6 stars
+    s = { ...s, rewards: [{ id: 'old', title: 'Old', goal: 'stars', target: 5, baseline: 6, repeat: false, claims: [] }] };
+    expect(rewardStatus(s, s.rewards[0], T0)).toBe('ready');
   });
 });

@@ -11,7 +11,8 @@ export interface ExerciseProps<K extends Exercise['kind']> {
   sound: boolean;
   /** True while the feedback sheet is showing. */
   locked: boolean;
-  onResult: (correct: boolean, correction?: string) => void;
+  /** `given` is what she answered, shown when she looks back at the question. */
+  onResult: (correct: boolean, correction?: string, given?: string) => void;
 }
 
 interface FrameProps {

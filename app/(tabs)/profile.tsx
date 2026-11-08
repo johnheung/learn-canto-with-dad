@@ -1,5 +1,6 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { ProgressBar } from '@/components/ProgressBar';
@@ -7,7 +8,8 @@ import { useProgress } from '@/lib/context/ProgressContext';
 import { units } from '@/lib/content';
 import { LEVELS } from '@/lib/engine/difficulty';
 import { MAX_BOX } from '@/lib/engine/srs';
-import { dayKey, displayStreak, unitProgress, xpToday } from '@/lib/progress';
+import { dayKey, displayStreak, starBalance, unitProgress, xpToday } from '@/lib/progress';
+import { formatDuration, summarize } from '@/lib/dashboard';
 import { useLayout } from '@/lib/layout';
 import { theme } from '@/lib/theme';
 
@@ -33,10 +35,23 @@ export default function ProfileScreen() {
         <Text style={styles.title}>Your progress</Text>
         <Text style={styles.subtitle}>{level} learner · no account, saved on this device</Text>
 
+        <Pressable testID="open-dashboard" style={styles.dashboardLink} onPress={() => router.push('/dashboard')}>
+          <Ionicons name="stats-chart" size={24} color={theme.colors.primary} />
+          <View style={styles.dashboardText}>
+            <Text style={styles.dashboardTitle}>Learning dashboard</Text>
+            <Text style={styles.dashboardDetail}>
+              {formatDuration(summarize(state.sessions, now).weekMs)} this week · session times and graphs
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color={theme.colors.textMuted} />
+        </Pressable>
+
         <View style={styles.grid}>
           <Tile icon="flame" color={theme.colors.streak} value={displayStreak(state, now)} label="Day streak" />
           <Tile icon="trophy" color={theme.colors.accent} value={state.streak.best} label="Best streak" />
           <Tile icon="flash" color={theme.colors.xp} value={state.xp} label="Total XP" />
+          <Tile icon="star" color={theme.colors.xp} value={state.totals.stars} label="Stars earned" />
+          <Tile icon="wallet" color={theme.colors.success} value={starBalance(state)} label="Stars to spend" />
           <Tile icon="ribbon" color={theme.colors.primary} value={crowns} label="Lesson levels" />
           <Tile icon="book" color={theme.colors.success} value={words.length} label="Words learned" />
           <Tile icon="star" color={theme.colors.heart} value={mastered} label="Words mastered" />
@@ -117,6 +132,29 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: theme.colors.textMuted,
+  },
+  dashboardLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(3),
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+    padding: theme.spacing(4),
+  },
+  dashboardText: {
+    flex: 1,
+    gap: 2,
+  },
+  dashboardTitle: {
+    color: theme.colors.text,
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  dashboardDetail: {
+    color: theme.colors.textMuted,
+    fontSize: 13,
   },
   grid: {
     flexDirection: 'row',

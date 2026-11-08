@@ -79,7 +79,7 @@ export function BuildEnglish({ exercise, script, sound, locked, onResult }: Exer
   const check = () => {
     const given = chosen.map((i) => exercise.bank[i]);
     const ok = sentenceAnswerTokens(sentence).some((answer) => tokensMatch(given, answer));
-    onResult(ok, sentence.english);
+    onResult(ok, sentence.english, given.join(' '));
   };
 
   return (
@@ -135,7 +135,7 @@ export function BuildCantonese({ exercise, script, sound, locked, onResult }: Ex
   const check = () => {
     const given = chosen.map((i) => exercise.bank[i].hanzi);
     const answer = sentenceText(exercise.answer);
-    onResult(tokensMatch(given, exercise.answer.map((t) => t.hanzi)), `${answer.hanzi} (${answer.jyutping})`);
+    onResult(tokensMatch(given, exercise.answer.map((t) => t.hanzi)), `${answer.hanzi} (${answer.jyutping})`, given.join(''));
   };
 
   return (

@@ -80,6 +80,21 @@ export default function SettingsScreen() {
           />
         </Section>
 
+        <Section
+          title="How to learn"
+          detail="Questions, or the Lantern Catch game. Stars from both add up. Unit tests are always questions."
+        >
+          <Segmented
+            testIDPrefix="learnmode"
+            options={[
+              { id: 'qa', label: '📝 Questions' },
+              { id: 'game', label: '🏮 Game' },
+            ]}
+            value={settings.learnMode}
+            onChange={(learnMode) => updateSettings({ learnMode })}
+          />
+        </Section>
+
         <Section title="Daily goal">
           <Segmented
             testIDPrefix="goal"

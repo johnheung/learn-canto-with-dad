@@ -25,7 +25,7 @@ export function MeaningChoice({ exercise, script, sound, locked, onResult }: Exe
       badge={exercise.isNew ? 'New word' : undefined}
       locked={locked}
       canCheck={selected !== null}
-      onCheck={() => onResult(selected === exercise.answer, exercise.answer)}
+      onCheck={() => onResult(selected === exercise.answer, exercise.answer, selected ?? undefined)}
     >
       <View style={styles.prompt}>
         <SpeakerButton text={word.hanzi} enabled={sound} autoPlay />

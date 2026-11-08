@@ -26,7 +26,10 @@ export function CantoneseChoice({ exercise, script, sound, locked, onResult }: E
       title={listening ? 'What do you hear?' : `How do you say “${word.english}”?`}
       locked={locked}
       canCheck={selected !== null}
-      onCheck={() => onResult(selected === exercise.answerId, displayWord(word))}
+      onCheck={() => {
+        const chosen = exercise.options.find((o) => o.id === selected);
+        onResult(selected === exercise.answerId, displayWord(word), chosen ? displayWord(chosen) : undefined);
+      }}
     >
       {listening ? (
         <View style={styles.listen}>

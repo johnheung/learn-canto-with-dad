@@ -195,7 +195,7 @@ describe('RewardEditor', () => {
     fireEvent(screen.getByTestId('target-input'), 'focus');
     fireEvent.changeText(screen.getByTestId('target-input'), '');
     fireEvent.changeText(screen.getByTestId('target-input'), '42');
-    expect(screen.getByTestId('reward-summary')).toHaveTextContent('Earn 42 stars from now');
+    expect(screen.getByTestId('reward-summary')).toHaveTextContent('Costs 42 stars (she has 0 ⭐ to spend)');
     fireEvent.press(screen.getByTestId('reward-save'));
     expect(onClose).toHaveBeenCalled();
     expect(latest!.rewards.at(-1)).toMatchObject({ title: 'Ice cream', goal: 'stars', target: 42, repeat: false });
@@ -210,7 +210,7 @@ describe('RewardEditor', () => {
     fireEvent.press(screen.getByTestId('goal-type-streak')); // default 7, step 1
     expect(screen.getByTestId('target-input').props.value).toBe('7');
     fireEvent.press(screen.getByTestId('target-minus'));
-    expect(screen.getByTestId('reward-summary')).toHaveTextContent('Reach a 6-day streak');
+    expect(screen.getByTestId('reward-summary')).toHaveTextContent('Reach a 6-day streak (current streak: 0)');
     fireEvent(screen.getByTestId('reward-repeat'), 'valueChange', true);
     fireEvent.press(screen.getByTestId('reward-save'));
     expect(latest!.rewards.at(-1)).toMatchObject({ title: 'Movie', goal: 'streak', target: 6, repeat: true });

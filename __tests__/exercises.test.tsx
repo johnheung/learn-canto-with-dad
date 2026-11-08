@@ -49,12 +49,12 @@ describe.each(SCRIPTS)('exercises in %s mode', (script) => {
     expect(screen.getByTestId('check')).toBeDisabled();
     fireEvent.press(screen.getByTestId(`option-${right}`));
     fireEvent.press(screen.getByTestId('check'));
-    expect(onResult).toHaveBeenLastCalledWith(true, ex.answer);
+    expect(onResult).toHaveBeenLastCalledWith(true, ex.answer, ex.answer);
 
     const second = setup(ex, script);
     fireEvent.press(screen.getByTestId(`option-${(right + 1) % ex.options.length}`));
     fireEvent.press(screen.getByTestId('check'));
-    expect(second.onResult).toHaveBeenLastCalledWith(false, ex.answer);
+    expect(second.onResult).toHaveBeenLastCalledWith(false, ex.answer, ex.options[(right + 1) % ex.options.length]);
   });
 
   it.each(['mc-cantonese', 'listen'] as const)('%s: marks the chosen word', (kind) => {
@@ -64,7 +64,7 @@ describe.each(SCRIPTS)('exercises in %s mode', (script) => {
     fireEvent.press(screen.getByTestId(`option-${(right + 1) % ex.options.length}`));
     fireEvent.press(screen.getByTestId(`option-${right}`));
     fireEvent.press(screen.getByTestId('check'));
-    expect(onResult).toHaveBeenCalledWith(true, expect.stringContaining(ex.word.hanzi));
+    expect(onResult).toHaveBeenCalledWith(true, expect.stringContaining(ex.word.hanzi), expect.stringContaining(ex.word.hanzi));
   });
 
   it('match: finishes only after every pair is matched, ignoring mismatches', () => {
@@ -95,7 +95,7 @@ describe.each(SCRIPTS)('exercises in %s mode', (script) => {
     const wrong = ex.options.find((t) => t !== ex.answer)!;
     fireEvent.press(screen.getByTestId(`tone-${wrong}`));
     fireEvent.press(screen.getByTestId('check'));
-    expect(onResult).toHaveBeenLastCalledWith(false, expect.stringContaining(`tone ${ex.answer}`));
+    expect(onResult).toHaveBeenLastCalledWith(false, expect.stringContaining(`tone ${ex.answer}`), expect.stringContaining(`tone ${wrong}`));
   });
 
   it('build-en: accepts the sentence in order, rejects it out of order', () => {
@@ -111,13 +111,13 @@ describe.each(SCRIPTS)('exercises in %s mode', (script) => {
     const first = setup(ex, script);
     tap(ex.answer);
     fireEvent.press(screen.getByTestId('check'));
-    expect(first.onResult).toHaveBeenLastCalledWith(true, ex.sentence.english);
+    expect(first.onResult).toHaveBeenLastCalledWith(true, ex.sentence.english, ex.answer.join(' '));
 
     if (ex.answer.length > 1) {
       const second = setup(ex, script);
       tap([...ex.answer].reverse());
       fireEvent.press(screen.getByTestId('check'));
-      expect(second.onResult).toHaveBeenLastCalledWith(false, ex.sentence.english);
+      expect(second.onResult).toHaveBeenLastCalledWith(false, ex.sentence.english, [...ex.answer].reverse().join(' '));
     }
   });
 
@@ -131,7 +131,7 @@ describe.each(SCRIPTS)('exercises in %s mode', (script) => {
       fireEvent.press(screen.getByTestId(`bank-${i}`));
     }
     fireEvent.press(screen.getByTestId('check'));
-    expect(onResult).toHaveBeenLastCalledWith(true, expect.any(String));
+    expect(onResult).toHaveBeenLastCalledWith(true, expect.any(String), ex.answer.map((t) => t.hanzi).join(''));
   });
 
   it('type: grades typed Jyutping', () => {
@@ -140,10 +140,10 @@ describe.each(SCRIPTS)('exercises in %s mode', (script) => {
     expect(screen.getByTestId('check')).toBeDisabled();
     fireEvent.changeText(screen.getByTestId('type-input'), ex.word.jyutping);
     fireEvent.press(screen.getByTestId('check'));
-    expect(onResult).toHaveBeenLastCalledWith(true, expect.stringContaining(ex.word.jyutping));
+    expect(onResult).toHaveBeenLastCalledWith(true, expect.stringContaining(ex.word.jyutping), ex.word.jyutping);
     fireEvent.changeText(screen.getByTestId('type-input'), 'zzz');
     fireEvent.press(screen.getByTestId('check'));
-    expect(onResult).toHaveBeenLastCalledWith(false, expect.any(String));
+    expect(onResult).toHaveBeenLastCalledWith(false, expect.any(String), 'zzz');
   });
 });
 

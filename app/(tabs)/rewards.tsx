@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '@/components/Screen';
-import { Button } from '@/components/Button';
+import { RewardCard } from '@/components/RewardCard';
 import { HeaderStats } from '@/components/HeaderStats';
 import { PinPrompt } from '@/components/PinPrompt';
-import { ProgressBar } from '@/components/ProgressBar';
 import { useProgress } from '@/lib/context/ProgressContext';
 import { units } from '@/lib/content';
 import { useLayout } from '@/lib/layout';
-import { describeGoal, rewardProgress, rewardStatus } from '@/lib/rewards';
+import { rewardProgress, rewardStatus } from '@/lib/rewards';
+import { starBalance } from '@/lib/progress';
 import { speak } from '@/lib/speech';
 import {
   collectedCount,
@@ -35,6 +35,13 @@ export default function RewardsScreen() {
   const rewardsPart = (
     <>
       <Text style={styles.title}>Rewards</Text>
+      <View style={styles.balance} testID="star-balance">
+        <Text style={styles.balanceStar}>⭐</Text>
+        <View style={styles.balanceText}>
+          <Text style={styles.balanceValue}>{starBalance(state)} stars to spend</Text>
+          <Text style={styles.muted}>Earn stars in lessons and games, then spend them on rewards from Dad.</Text>
+        </View>
+      </View>
 
       {justClaimed ? (
         <View style={styles.celebrate} testID="claimed-banner">
@@ -49,31 +56,15 @@ export default function RewardsScreen() {
           <Text style={styles.muted}>Ask Dad to set one up in Settings → Parent area.</Text>
         </View>
       ) : (
-        active.map((r) => {
-          const progress = Math.min(rewardProgress(state, r, now), r.target);
-          const ready = rewardStatus(state, r, now) === 'ready';
-          return (
-            <View key={r.id} style={[styles.card, ready && styles.cardReady]} testID={`reward-${r.id}`}>
-              <Text style={styles.cardTitle}>{r.title}</Text>
-              <Text style={styles.muted}>
-                {describeGoal(r.goal, r.target)}
-                {r.repeat ? ' · repeats' : ''}
-                {r.claims.length ? ` · claimed ${r.claims.length}×` : ''}
-              </Text>
-              <View style={styles.row}>
-                <View style={styles.bar}>
-                  <ProgressBar value={progress / r.target} color={ready ? theme.colors.success : theme.colors.accent} />
-                </View>
-                <Text style={styles.count}>
-                  {progress}/{r.target}
-                </Text>
-              </View>
-              {ready ? (
-                <Button testID="claim" label="Claim 🎁" variant="success" onPress={() => setClaiming(r)} />
-              ) : null}
-            </View>
-          );
-        })
+        active.map((r) => (
+          <RewardCard
+            key={r.id}
+            reward={r}
+            progress={rewardProgress(state, r, now)}
+            ready={rewardStatus(state, r, now) === 'ready'}
+            onClaim={() => setClaiming(r)}
+          />
+        ))
       )}
 
       {done.length > 0 ? (
@@ -191,6 +182,28 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: '800',
   },
+  balance: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(3),
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    borderWidth: 2,
+    borderColor: theme.colors.xp,
+    padding: theme.spacing(4),
+  },
+  balanceStar: {
+    fontSize: 36,
+  },
+  balanceText: {
+    flex: 1,
+    gap: 2,
+  },
+  balanceValue: {
+    color: theme.colors.xp,
+    fontSize: 20,
+    fontWeight: '900',
+  },
   celebrate: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -216,9 +229,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: theme.colors.surface,
   },
-  cardReady: {
-    borderColor: theme.colors.success,
-  },
   cardDone: {
     opacity: 0.7,
   },
@@ -230,21 +240,6 @@ const styles = StyleSheet.create({
   muted: {
     color: theme.colors.textMuted,
     fontSize: 14,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing(3),
-  },
-  bar: {
-    flex: 1,
-    flexDirection: 'row',
-  },
-  count: {
-    color: theme.colors.text,
-    fontWeight: '800',
-    minWidth: 48,
-    textAlign: 'right',
   },
   section: {
     color: theme.colors.textMuted,

@@ -31,6 +31,8 @@ export default function RootLayout() {
             <Stack.Screen name="lesson/complete" options={{ gestureEnabled: false, animation: 'fade' }} />
             <Stack.Screen name="buddy" options={{ animation: 'slide_from_bottom' }} />
             <Stack.Screen name="parent" options={{ animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="game/[id]" options={{ gestureEnabled: false, animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="dashboard" options={{ animation: 'slide_from_right' }} />
           </Stack>
         </ProgressProvider>
       </KeyboardProvider>

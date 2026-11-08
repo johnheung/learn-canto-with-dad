@@ -36,9 +36,9 @@ export default function PracticeScreen() {
           </Text>
           <Button
             testID="start-practice"
-            label="Start practice"
+            label={state.settings.learnMode === 'game' ? '🏮 Play practice game' : 'Start practice'}
             disabled={!canPractice}
-            onPress={() => router.push('/lesson/practice')}
+            onPress={() => router.push(state.settings.learnMode === 'game' ? '/game/practice' : '/lesson/practice')}
           />
         </View>
 

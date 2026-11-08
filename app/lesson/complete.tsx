@@ -10,6 +10,7 @@ import { goToTab } from '@/lib/navigation';
 import { units } from '@/lib/content';
 import { cheer, mascotEmoji, STAGES } from '@/lib/mascot';
 import { displayStreak, xpToday } from '@/lib/progress';
+import { formatDuration } from '@/lib/dashboard';
 import { readyRewardCount } from '@/lib/rewards';
 import { speak } from '@/lib/speech';
 import { STICKER_PAGES, stickerWord } from '@/lib/stickers';
@@ -27,6 +28,13 @@ export default function CompleteScreen() {
     stickerNew?: string;
     page?: string;
     stage?: string;
+    /** Active time in ms. */
+    time?: string;
+    /** Lantern Catch: final score, and '1' for a new best. */
+    score?: string;
+    best?: string;
+    /** Lantern Catch round lost: all lives gone. */
+    gameOver?: string;
   }>();
   const { state } = useProgress();
   const now = Date.now();
@@ -46,7 +54,11 @@ export default function CompleteScreen() {
   const today = xpToday(state, now);
   const goal = state.settings.dailyGoal;
 
-  const title = failed
+  const isGame = params.score !== undefined;
+  const gameOver = params.gameOver === '1';
+  const title = gameOver
+    ? 'Game over!'
+    : failed
     ? 'Out of hearts'
     : checkpointFailed
       ? 'So close!'
@@ -54,7 +66,9 @@ export default function CompleteScreen() {
         ? 'Unit unlocked!'
         : params.kind === 'practice'
           ? 'Practice complete!'
-          : 'Lesson complete!';
+          : isGame
+            ? 'Lanterns caught!'
+            : 'Lesson complete!';
 
   return (
     <Screen edges={['top', 'bottom', 'left', 'right']} style={styles.root}>
@@ -70,7 +84,7 @@ export default function CompleteScreen() {
         <Text style={styles.title} testID="complete-title">
           {title}
         </Text>
-        {failed ? (
+        {failed && !gameOver ? (
           <Text style={styles.detail}>Practise to earn hearts back, then try again.</Text>
         ) : checkpointFailed ? (
           <Text style={styles.detail}>You need 80% to pass. Review the unit and try again.</Text>
@@ -124,6 +138,19 @@ export default function CompleteScreen() {
             <Stat label="Accuracy" value={`${params.accuracy ?? 0}%`} color={theme.colors.success} icon="checkmark-done" />
             <Stat label="Streak" value={String(displayStreak(state, now))} color={theme.colors.streak} icon="flame" />
           </View>
+        ) : null}
+
+        {isGame ? (
+          <Text style={styles.score} testID="game-score">
+            🏮 Score {params.score}
+            {params.best === '1' ? '  ·  New high score! 🎉' : ''}
+          </Text>
+        ) : null}
+        {gameOver ? <Text style={styles.cheer}>Out of lives. No stars this time: have another go!</Text> : null}
+        {params.time ? (
+          <Text style={styles.time} testID="session-time">
+            ⏱ {formatDuration(Number(params.time))} this session
+          </Text>
         ) : null}
 
         <View style={styles.goal}>
@@ -284,6 +311,17 @@ const styles = StyleSheet.create({
     color: theme.colors.success,
     fontWeight: '800',
     textAlign: 'center',
+  },
+  score: {
+    color: theme.colors.accent,
+    fontSize: 20,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  time: {
+    color: theme.colors.textMuted,
+    fontSize: 15,
+    fontWeight: '700',
   },
   goal: {
     alignSelf: 'stretch',
