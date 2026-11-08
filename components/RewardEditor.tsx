@@ -5,7 +5,7 @@ import { Button } from '@/components/Button';
 import { NumberStepper } from '@/components/NumberStepper';
 import { OptionCard } from '@/components/OptionCard';
 import { useProgress } from '@/lib/context/ProgressContext';
-import { describeGoal, goalInfo, REWARD_GOALS, RewardDraft, rewardProgress } from '@/lib/rewards';
+import { describeGoal, goalInfo, goalValue, REWARD_GOALS, RewardDraft, rewardProgress } from '@/lib/rewards';
 import { Reward } from '@/lib/types';
 import { confirm } from '@/lib/ui';
 import { theme } from '@/lib/theme';
@@ -23,7 +23,15 @@ export function RewardEditor({ reward, onClose }: { reward?: Reward; onClose: ()
       : { title: '', goal: 'stars', target: goalInfo('stars').defaultTarget, repeat: false },
   );
   const info = goalInfo(draft.goal);
-  const progressSoFar = reward && reward.goal === draft.goal ? rewardProgress(state, reward, Date.now()) : null;
+  // Stars: her balance. Others: everything she's done (or since the last claim, for an edited repeating reward).
+  const soFar =
+    reward && reward.goal === draft.goal ? rewardProgress(state, reward, Date.now()) : goalValue(state, draft.goal, Date.now());
+  const soFarText =
+    draft.goal === 'stars'
+      ? ` (she has ${soFar} ⭐ to spend)`
+      : draft.goal === 'streak'
+        ? ` (current streak: ${soFar})`
+        : ` (${soFar} done so far)`;
 
   return (
     <KeyboardAwareScrollView
@@ -75,7 +83,7 @@ export function RewardEditor({ reward, onClose }: { reward?: Reward; onClose: ()
       />
       <Text style={styles.summary} testID="reward-summary">
         {describeGoal(draft.goal, draft.target)}
-        {draft.goal === 'streak' ? '' : progressSoFar !== null ? ` (${progressSoFar} done so far)` : ' from now'}
+        {soFarText}
       </Text>
 
       <View style={styles.row}>

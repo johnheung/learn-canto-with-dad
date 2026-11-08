@@ -7,8 +7,11 @@ import { Button } from '@/components/Button';
 import { HeaderStats } from '@/components/HeaderStats';
 import { VoiceTip } from '@/components/VoiceTip';
 import { BuddyCard } from '@/components/BuddyCard';
+import { TodayCard } from '@/components/TodayCard';
+import { LearnModeToggle } from '@/components/LearnModeToggle';
 import { useProgress } from '@/lib/context/ProgressContext';
 import { checkpointId, units } from '@/lib/content';
+import { useLayout } from '@/lib/layout';
 import {
   crownsFor,
   currentHearts,
@@ -27,14 +30,19 @@ const OFFSETS = [0, 44, 70, 44, 0, -44, -70, -44];
 
 export default function LearnScreen() {
   const { state } = useProgress();
+  const layout = useLayout();
   const [selected, setSelected] = useState<string | null>(null);
+  // Bigger lesson circles on tablets.
+  const nodeSize = Math.round(72 * layout.scale);
   const now = Date.now();
   const outOfHearts = state.settings.hearts && currentHearts(state, now) === 0;
   const heartWait = nextHeartIn(state, now);
 
-  const start = (id: string) => {
+  const gameMode = state.settings.learnMode === 'game';
+  /** Unit tests are always questions; other lessons follow the Questions/Game toggle. */
+  const start = (id: string, isCheckpoint = false) => {
     setSelected(null);
-    router.push(`/lesson/${id}`);
+    router.push(gameMode && !isCheckpoint ? `/game/${id}` : `/lesson/${id}`);
   };
 
   const renderUnit = (unit: Unit) => {
@@ -76,20 +84,26 @@ export default function LearnScreen() {
 
           return (
             <View key={node.id} style={styles.nodeRow}>
-              <View style={{ transform: [{ translateX: OFFSETS[i % OFFSETS.length] }], alignItems: 'center' }}>
+              <View style={{ transform: [{ translateX: OFFSETS[i % OFFSETS.length] * layout.scale }], alignItems: 'center' }}>
                 <Pressable
                   testID={`node-${node.id}`}
                   accessibilityLabel={node.title}
                   onPress={() => setSelected(isSelected ? null : node.id)}
                   style={({ pressed }) => [
                     styles.node,
-                    { backgroundColor: color, borderBottomColor: 'rgba(0,0,0,0.3)' },
+                    {
+                      width: nodeSize,
+                      height: nodeSize - 6,
+                      borderRadius: nodeSize / 2,
+                      backgroundColor: color,
+                      borderBottomColor: 'rgba(0,0,0,0.3)',
+                    },
                     pressed && styles.nodePressed,
                   ]}
                 >
                   <Ionicons
                     name={!open ? 'lock-closed' : isCheckpoint ? 'trophy' : done ? 'checkmark' : 'star'}
-                    size={30}
+                    size={Math.round(30 * layout.scale)}
                     color="#FFFFFF"
                   />
                 </Pressable>
@@ -108,7 +122,7 @@ export default function LearnScreen() {
                     <Text style={styles.popDetail}>
                       {isCheckpoint ? 'Finish every lesson in this unit first.' : 'Finish the lesson before this one first.'}
                     </Text>
-                  ) : outOfHearts ? (
+                  ) : outOfHearts && (isCheckpoint || !gameMode) ? (
                     <>
                       <Text style={styles.popDetail}>
                         You're out of hearts. Practise to earn one
@@ -122,13 +136,13 @@ export default function LearnScreen() {
                         {isCheckpoint
                           ? passed
                             ? 'Passed! Retake it any time.'
-                            : 'Score 80% to unlock the next unit.'
+                            : `Score 80% to unlock the next unit.${gameMode ? ' Unit tests are always questions.' : ''}`
                           : `Level ${Math.min(crowns + 1, MAX_CROWNS)} of ${MAX_CROWNS}${crowns >= MAX_CROWNS ? ' · mastered' : ''}`}
                       </Text>
                       <Button
                         testID="start-lesson"
-                        label={`Start +${isCheckpoint ? XP.checkpoint : XP.lesson} XP`}
-                        onPress={() => start(node.id)}
+                        label={`${gameMode && !isCheckpoint ? '🏮 Play' : 'Start'} +${isCheckpoint ? XP.checkpoint : XP.lesson} XP`}
+                        onPress={() => start(node.id, isCheckpoint)}
                       />
                     </>
                   )}
@@ -141,9 +155,34 @@ export default function LearnScreen() {
     );
   };
 
+  // Wide screens: buddy and today's progress in a sidebar beside the path.
+  if (layout.isWide) {
+    return (
+      <Screen wide>
+        <HeaderStats />
+        <View style={styles.toggle}>
+          <LearnModeToggle />
+        </View>
+        <View style={styles.columns}>
+          <ScrollView style={styles.sidebar} contentContainerStyle={styles.sidebarContent}>
+            <VoiceTip />
+            <BuddyCard />
+            <TodayCard />
+          </ScrollView>
+          <ScrollView style={styles.main} contentContainerStyle={styles.path}>
+            {units.map(renderUnit)}
+          </ScrollView>
+        </View>
+      </Screen>
+    );
+  }
+
   return (
     <Screen>
       <HeaderStats />
+      <View style={styles.toggle}>
+        <LearnModeToggle />
+      </View>
       <ScrollView contentContainerStyle={styles.path}>
         <VoiceTip />
         <BuddyCard />
@@ -154,6 +193,27 @@ export default function LearnScreen() {
 }
 
 const styles = StyleSheet.create({
+  toggle: {
+    paddingHorizontal: theme.spacing(4),
+    paddingTop: theme.spacing(3),
+  },
+  columns: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  sidebar: {
+    width: 360,
+    flexGrow: 0,
+    borderRightWidth: 2,
+    borderRightColor: theme.colors.surfaceAlt,
+  },
+  sidebarContent: {
+    padding: theme.spacing(4),
+    gap: theme.spacing(4),
+  },
+  main: {
+    flex: 1,
+  },
   path: {
     padding: theme.spacing(4),
     paddingBottom: theme.spacing(20),
@@ -208,9 +268,6 @@ const styles = StyleSheet.create({
     gap: theme.spacing(3),
   },
   node: {
-    width: 72,
-    height: 66,
-    borderRadius: 36,
     borderBottomWidth: 6,
     alignItems: 'center',
     justifyContent: 'center',

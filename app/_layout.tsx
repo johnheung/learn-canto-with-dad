@@ -4,12 +4,14 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { ProgressProvider } from '@/lib/context/ProgressContext';
+import { applyOrientationPolicy } from '@/lib/orientation';
 import { detectCantoneseVoice } from '@/lib/speech';
 import { theme } from '@/lib/theme';
 
 export default function RootLayout() {
   useEffect(() => {
     detectCantoneseVoice();
+    applyOrientationPolicy();
   }, []);
 
   return (
@@ -29,6 +31,8 @@ export default function RootLayout() {
             <Stack.Screen name="lesson/complete" options={{ gestureEnabled: false, animation: 'fade' }} />
             <Stack.Screen name="buddy" options={{ animation: 'slide_from_bottom' }} />
             <Stack.Screen name="parent" options={{ animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="game/[id]" options={{ gestureEnabled: false, animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="dashboard" options={{ animation: 'slide_from_right' }} />
           </Stack>
         </ProgressProvider>
       </KeyboardProvider>

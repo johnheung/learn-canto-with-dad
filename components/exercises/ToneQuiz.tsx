@@ -25,7 +25,13 @@ export function ToneQuiz({ exercise, script, sound, locked, onResult }: Exercise
       title={syl.length > 1 ? `Which tone is “${hanziChar}”?` : 'Which tone is this?'}
       locked={locked}
       canCheck={selected !== null}
-      onCheck={() => onResult(selected === answer, `${syl[syllableIndex]} – tone ${answer} (${TONE_NAMES[answer]})`)}
+      onCheck={() =>
+        onResult(
+          selected === answer,
+          `${syl[syllableIndex]} – tone ${answer} (${TONE_NAMES[answer]})`,
+          selected ? `tone ${selected} (${TONE_NAMES[selected]})` : undefined,
+        )
+      }
     >
       <View style={styles.prompt}>
         <SpeakerButton text={word.hanzi} enabled={sound} autoPlay />

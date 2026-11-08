@@ -1,4 +1,4 @@
-import { Level, ProgressState, Unit } from '@/lib/types';
+import { Level, ProgressState, SessionLog, Unit } from '@/lib/types';
 import { units } from '@/lib/content';
 import { LEVEL_START_UNIT } from '@/lib/engine/difficulty';
 import { Rng } from '@/lib/engine/random';
@@ -28,7 +28,7 @@ export const DAILY_GOALS = [
 export function initialState(now: number = Date.now()): ProgressState {
   return {
     onboarded: false,
-    settings: { level: 'beginner', script: 'auto', sound: true, hearts: false, dailyGoal: 20, voiceTipDismissed: false },
+    settings: { level: 'beginner', script: 'auto', sound: true, hearts: false, dailyGoal: 20, voiceTipDismissed: false, learnMode: 'qa' },
     lessons: {},
     unlockedUnitIndex: 0,
     passedCheckpoints: [],
@@ -42,6 +42,9 @@ export function initialState(now: number = Date.now()): ProgressState {
     rewards: [],
     totals: { stars: 0, lessons: 0, checkpoints: 0 },
     parentPin: null,
+    starsSpent: 0,
+    sessions: [],
+    gameBest: {},
   };
 }
 
@@ -128,6 +131,26 @@ export function displayStreak(state: ProgressState, now: number): number {
 
 export function xpToday(state: ProgressState, now: number): number {
   return state.xpByDay[dayKey(now)] ?? 0;
+}
+
+/** Stars she has to spend on rewards. */
+export function starBalance(state: ProgressState): number {
+  return Math.max(0, state.totals.stars - state.starsSpent);
+}
+
+export const MAX_SESSIONS = 1000;
+
+/** Adds a session to the time log, keeping the newest MAX_SESSIONS. */
+export function logSession(state: ProgressState, session: Omit<SessionLog, 'id'>): ProgressState {
+  const entry: SessionLog = { id: `${session.startedAt.toString(36)}-${state.sessions.length}`, ...session };
+  return { ...state, sessions: [...state.sessions, entry].slice(-MAX_SESSIONS) };
+}
+
+/** Records a Lantern Catch score; returns whether it beat the previous best. */
+export function recordGameScore(state: ProgressState, lessonId: string, score: number): { state: ProgressState; best: boolean } {
+  const prev = state.gameBest[lessonId] ?? 0;
+  if (score <= prev) return { state, best: false };
+  return { state: { ...state, gameBest: { ...state.gameBest, [lessonId]: score } }, best: true };
 }
 
 export type CompletionKind = 'lesson' | 'checkpoint' | 'practice';

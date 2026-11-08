@@ -93,6 +93,26 @@ export interface Settings {
   dailyGoal: number;
   /** The "install a Cantonese voice" tip on the Learn screen was dismissed. */
   voiceTipDismissed: boolean;
+  /** How lessons are played: questions and answers, or the Lantern Catch game. */
+  learnMode: LearnMode;
+}
+
+export type LearnMode = 'qa' | 'game';
+
+/** One learning session, for the time log and dashboard. */
+export interface SessionLog {
+  id: string;
+  lessonId: string;
+  kind: 'lesson' | 'checkpoint' | 'practice';
+  mode: LearnMode;
+  startedAt: number;
+  /** Time spent with the app open, excluding time in the background. */
+  activeMs: number;
+  stars: number;
+  /** 0–1, first-attempt accuracy (or catches for the game). */
+  accuracy: number;
+  /** False if she quit or ran out of hearts/lives. */
+  completed: boolean;
 }
 
 export type MascotSpecies = 'panda' | 'cat' | 'dog' | 'rabbit' | 'tiger' | 'dragon';
@@ -117,7 +137,11 @@ export interface Reward {
   title: string;
   goal: RewardGoal;
   target: number;
-  /** Goal value when the reward was set (or last claimed, if repeating); progress counts from here. */
+  /**
+   * Goal value progress counts from: 0 for new rewards (everything she's done counts),
+   * moved up after each claim of a repeating reward. Not used for star rewards, which
+   * are paid for from the star balance instead.
+   */
   baseline: number;
   /** Start again after each claim, e.g. a weekly treat. */
   repeat: boolean;
@@ -145,4 +169,10 @@ export interface ProgressState {
   totals: Totals;
   /** Parent PIN guarding rewards and resets. */
   parentPin: string | null;
+  /** Stars spent on rewards; the balance is totals.stars − starsSpent. */
+  starsSpent: number;
+  /** Learning sessions, oldest first (newest kept when trimmed). */
+  sessions: SessionLog[];
+  /** Best Lantern Catch score per lesson id. */
+  gameBest: Record<string, number>;
 }

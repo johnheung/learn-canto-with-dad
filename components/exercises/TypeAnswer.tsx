@@ -2,17 +2,20 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput } from 'react-native';
 import { ExerciseFrame, ExerciseProps } from '@/components/exercises/ExerciseFrame';
 import { jyutpingMatches } from '@/lib/engine/grading';
+import { useLayout } from '@/lib/layout';
 import { theme } from '@/lib/theme';
 
 export function TypeAnswer({ exercise, locked, onResult }: ExerciseProps<'type'>) {
+  const { scale } = useLayout();
   const [text, setText] = useState('');
   const { word, requireTones } = exercise;
 
-  const check = () => onResult(jyutpingMatches(text, word.jyutping, requireTones), `${word.jyutping} (${word.hanzi})`);
+  const check = () =>
+    onResult(jyutpingMatches(text, word.jyutping, requireTones), `${word.jyutping} (${word.hanzi})`, text.trim());
 
   return (
     <ExerciseFrame title="Type this in Jyutping" locked={locked} canCheck={text.trim().length > 0} onCheck={check}>
-      <Text style={styles.english}>“{word.english}”</Text>
+      <Text style={[styles.english, { fontSize: 22 * scale }]}>“{word.english}”</Text>
       <TextInput
         testID="type-input"
         value={text}

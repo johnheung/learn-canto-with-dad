@@ -5,9 +5,11 @@ import { OptionCard } from '@/components/OptionCard';
 import { SpeakerButton } from '@/components/SpeakerButton';
 import { ExerciseFrame, ExerciseProps } from '@/components/exercises/ExerciseFrame';
 import { tapHaptic } from '@/lib/ui';
+import { useLayout } from '@/lib/layout';
 import { theme } from '@/lib/theme';
 
 export function MeaningChoice({ exercise, script, sound, locked, onResult }: ExerciseProps<'mc-meaning'>) {
+  const { scale } = useLayout();
   const [selected, setSelected] = useState<string | null>(null);
   const { word } = exercise;
 
@@ -23,7 +25,7 @@ export function MeaningChoice({ exercise, script, sound, locked, onResult }: Exe
       badge={exercise.isNew ? 'New word' : undefined}
       locked={locked}
       canCheck={selected !== null}
-      onCheck={() => onResult(selected === exercise.answer, exercise.answer)}
+      onCheck={() => onResult(selected === exercise.answer, exercise.answer, selected ?? undefined)}
     >
       <View style={styles.prompt}>
         <SpeakerButton text={word.hanzi} enabled={sound} autoPlay />
@@ -41,7 +43,7 @@ export function MeaningChoice({ exercise, script, sound, locked, onResult }: Exe
               setSelected(option);
             }}
           >
-            <Text style={styles.optionText}>{option}</Text>
+            <Text style={[styles.optionText, { fontSize: 17 * scale }]}>{option}</Text>
           </OptionCard>
         ))}
       </View>

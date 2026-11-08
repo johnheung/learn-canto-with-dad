@@ -79,8 +79,9 @@ function ParentHome({ onChangePin }: { onChangePin: () => void }) {
 
       <Text style={styles.section}>Rewards</Text>
       <Text style={styles.muted}>
-        Set a reward and the goal that unlocks it. Progress counts from when you set it (streaks use the current
-        streak). She taps Claim when it's unlocked, and you confirm with your PIN.
+        Set a reward and what unlocks it. Star rewards cost stars: she saves up, and claiming spends them. Other
+        goals count everything she has done so far (streaks use her current streak). When one is unlocked it glows
+        on her Rewards tab; she taps it and you confirm with your PIN.
       </Text>
       {state.rewards.map((r) => {
         const status = rewardStatus(state, r, now);

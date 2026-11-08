@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '@/components/Screen';
-import { Button } from '@/components/Button';
+import { RewardCard } from '@/components/RewardCard';
 import { HeaderStats } from '@/components/HeaderStats';
 import { PinPrompt } from '@/components/PinPrompt';
-import { ProgressBar } from '@/components/ProgressBar';
 import { useProgress } from '@/lib/context/ProgressContext';
 import { units } from '@/lib/content';
-import { describeGoal, rewardProgress, rewardStatus } from '@/lib/rewards';
+import { useLayout } from '@/lib/layout';
+import { rewardProgress, rewardStatus } from '@/lib/rewards';
+import { starBalance } from '@/lib/progress';
 import { speak } from '@/lib/speech';
 import {
   collectedCount,
@@ -23,6 +24,7 @@ import { theme } from '@/lib/theme';
 
 export default function RewardsScreen() {
   const { state, claim } = useProgress();
+  const layout = useLayout();
   const now = Date.now();
   const [claiming, setClaiming] = useState<Reward | null>(null);
   const [justClaimed, setJustClaimed] = useState<string | null>(null);
@@ -30,104 +32,119 @@ export default function RewardsScreen() {
   const active = state.rewards.filter((r) => rewardStatus(state, r, now) !== 'claimed');
   const done = state.rewards.filter((r) => rewardStatus(state, r, now) === 'claimed');
 
-  return (
-    <Screen>
-      <HeaderStats />
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Rewards</Text>
+  const rewardsPart = (
+    <>
+      <Text style={styles.title}>Rewards</Text>
+      <View style={styles.balance} testID="star-balance">
+        <Text style={styles.balanceStar}>⭐</Text>
+        <View style={styles.balanceText}>
+          <Text style={styles.balanceValue}>{starBalance(state)} stars to spend</Text>
+          <Text style={styles.muted}>Earn stars in lessons and games, then spend them on rewards from Dad.</Text>
+        </View>
+      </View>
 
-        {justClaimed ? (
-          <View style={styles.celebrate} testID="claimed-banner">
-            <Text style={styles.celebrateEmoji}>🎉</Text>
-            <Text style={styles.celebrateText}>Enjoy your reward: {justClaimed}!</Text>
-          </View>
-        ) : null}
+      {justClaimed ? (
+        <View style={styles.celebrate} testID="claimed-banner">
+          <Text style={styles.celebrateEmoji}>🎉</Text>
+          <Text style={styles.celebrateText}>Enjoy your reward: {justClaimed}!</Text>
+        </View>
+      ) : null}
 
-        {active.length === 0 ? (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>No rewards yet 🎁</Text>
-            <Text style={styles.muted}>Ask Dad to set one up in Settings → Parent area.</Text>
-          </View>
-        ) : (
-          active.map((r) => {
-            const progress = Math.min(rewardProgress(state, r, now), r.target);
-            const ready = rewardStatus(state, r, now) === 'ready';
-            return (
-              <View key={r.id} style={[styles.card, ready && styles.cardReady]} testID={`reward-${r.id}`}>
-                <Text style={styles.cardTitle}>{r.title}</Text>
-                <Text style={styles.muted}>
-                  {describeGoal(r.goal, r.target)}
-                  {r.repeat ? ' · repeats' : ''}
-                  {r.claims.length ? ` · claimed ${r.claims.length}×` : ''}
-                </Text>
-                <View style={styles.row}>
-                  <View style={styles.bar}>
-                    <ProgressBar value={progress / r.target} color={ready ? theme.colors.success : theme.colors.accent} />
-                  </View>
-                  <Text style={styles.count}>
-                    {progress}/{r.target}
-                  </Text>
-                </View>
-                {ready ? (
-                  <Button testID="claim" label="Claim 🎁" variant="success" onPress={() => setClaiming(r)} />
-                ) : null}
-              </View>
-            );
-          })
-        )}
+      {active.length === 0 ? (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>No rewards yet 🎁</Text>
+          <Text style={styles.muted}>Ask Dad to set one up in Settings → Parent area.</Text>
+        </View>
+      ) : (
+        active.map((r) => (
+          <RewardCard
+            key={r.id}
+            reward={r}
+            progress={rewardProgress(state, r, now)}
+            ready={rewardStatus(state, r, now) === 'ready'}
+            onClaim={() => setClaiming(r)}
+          />
+        ))
+      )}
 
-        {done.length > 0 ? (
-          <>
-            <Text style={styles.section}>Claimed</Text>
-            {done.map((r) => (
-              <View key={r.id} style={[styles.card, styles.cardDone]}>
-                <Text style={styles.cardTitle}>✅ {r.title}</Text>
-                <Text style={styles.muted}>{new Date(r.claims[r.claims.length - 1]).toLocaleDateString()}</Text>
-              </View>
-            ))}
-          </>
-        ) : null}
-
-        <Text style={styles.section}>
-          Sticker book · {collectedCount(state)}/{TOTAL_STICKERS}
-        </Text>
-        <Text style={styles.muted}>
-          Every lesson earns a sticker. Fill a page for {PAGE_BONUS_STARS} bonus stars. Tap a sticker to hear it.
-        </Text>
-        {STICKER_PAGES.map((page) => {
-          const unit = units.find((u) => u.id === page.unitId)!;
-          const complete = isPageComplete(state, page);
-          return (
-            <View key={page.unitId} style={[styles.page, complete && styles.pageComplete]}>
-              <Text style={styles.pageTitle}>
-                {unit.title} {unit.hanziTitle}
-                {complete ? '  ⭐ Complete!' : ''}
-              </Text>
-              <View style={styles.stickers}>
-                {page.stickers.map((st) => {
-                  const have = (state.stickers[st.wordId] ?? 0) > 0;
-                  const word = stickerWord(st);
-                  return (
-                    <Pressable
-                      key={st.wordId}
-                      testID={`sticker-${st.wordId}`}
-                      disabled={!have}
-                      onPress={() => state.settings.sound && speak(word.hanzi)}
-                      style={[styles.sticker, !have && styles.stickerMissing]}
-                    >
-                      <Text style={styles.stickerEmoji}>{have ? st.emoji : '❔'}</Text>
-                      <Text style={styles.stickerHanzi}>{have ? word.hanzi : ' '}</Text>
-                      <Text style={styles.stickerSub} numberOfLines={1}>
-                        {have ? word.jyutping : ' '}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+      {done.length > 0 ? (
+        <>
+          <Text style={styles.section}>Claimed</Text>
+          {done.map((r) => (
+            <View key={r.id} style={[styles.card, styles.cardDone]}>
+              <Text style={styles.cardTitle}>✅ {r.title}</Text>
+              <Text style={styles.muted}>{new Date(r.claims[r.claims.length - 1]).toLocaleDateString()}</Text>
             </View>
-          );
-        })}
-      </ScrollView>
+          ))}
+        </>
+      ) : null}
+
+    </>
+  );
+
+  const stickersPart = (
+    <>
+      <Text style={styles.section}>
+        Sticker book · {collectedCount(state)}/{TOTAL_STICKERS}
+      </Text>
+      <Text style={styles.muted}>
+        Every lesson earns a sticker. Fill a page for {PAGE_BONUS_STARS} bonus stars. Tap a sticker to hear it.
+      </Text>
+      {STICKER_PAGES.map((page) => {
+        const unit = units.find((u) => u.id === page.unitId)!;
+        const complete = isPageComplete(state, page);
+        return (
+          <View key={page.unitId} style={[styles.page, complete && styles.pageComplete]}>
+            <Text style={styles.pageTitle}>
+              {unit.title} {unit.hanziTitle}
+              {complete ? '  ⭐ Complete!' : ''}
+            </Text>
+            <View style={styles.stickers}>
+              {page.stickers.map((st) => {
+                const have = (state.stickers[st.wordId] ?? 0) > 0;
+                const word = stickerWord(st);
+                return (
+                  <Pressable
+                    key={st.wordId}
+                    testID={`sticker-${st.wordId}`}
+                    disabled={!have}
+                    onPress={() => state.settings.sound && speak(word.hanzi)}
+                    style={[styles.sticker, !have && styles.stickerMissing]}
+                  >
+                    <Text style={styles.stickerEmoji}>{have ? st.emoji : '❔'}</Text>
+                    <Text style={styles.stickerHanzi}>{have ? word.hanzi : ' '}</Text>
+                    <Text style={styles.stickerSub} numberOfLines={1}>
+                      {have ? word.jyutping : ' '}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        );
+      })}
+    </>
+  );
+
+  return (
+    <Screen wide={layout.isWide}>
+      <HeaderStats />
+      {layout.isWide ? (
+        // Wide screens: rewards beside the sticker book.
+        <View style={styles.columns}>
+          <ScrollView style={styles.column} contentContainerStyle={styles.content}>
+            {rewardsPart}
+          </ScrollView>
+          <ScrollView style={styles.column} contentContainerStyle={styles.content}>
+            {stickersPart}
+          </ScrollView>
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.content}>
+          {rewardsPart}
+          {stickersPart}
+        </ScrollView>
+      )}
 
       <PinPrompt
         visible={!!claiming}
@@ -148,6 +165,13 @@ export default function RewardsScreen() {
 }
 
 const styles = StyleSheet.create({
+  columns: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  column: {
+    flex: 1,
+  },
   content: {
     padding: theme.spacing(4),
     gap: theme.spacing(3),
@@ -157,6 +181,28 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     fontSize: 26,
     fontWeight: '800',
+  },
+  balance: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(3),
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    borderWidth: 2,
+    borderColor: theme.colors.xp,
+    padding: theme.spacing(4),
+  },
+  balanceStar: {
+    fontSize: 36,
+  },
+  balanceText: {
+    flex: 1,
+    gap: 2,
+  },
+  balanceValue: {
+    color: theme.colors.xp,
+    fontSize: 20,
+    fontWeight: '900',
   },
   celebrate: {
     flexDirection: 'row',
@@ -183,9 +229,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: theme.colors.surface,
   },
-  cardReady: {
-    borderColor: theme.colors.success,
-  },
   cardDone: {
     opacity: 0.7,
   },
@@ -197,21 +240,6 @@ const styles = StyleSheet.create({
   muted: {
     color: theme.colors.textMuted,
     fontSize: 14,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing(3),
-  },
-  bar: {
-    flex: 1,
-    flexDirection: 'row',
-  },
-  count: {
-    color: theme.colors.text,
-    fontWeight: '800',
-    minWidth: 48,
-    textAlign: 'right',
   },
   section: {
     color: theme.colors.textMuted,
