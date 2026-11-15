@@ -17,7 +17,7 @@ A mobile app for learning Cantonese a few minutes a day. It's built with Expo (R
   | Build | Make a sentence from a word bank, in either direction |
   | Type | Type the Jyutping, with tone numbers required at higher difficulty |
 
-- **Motivation**: XP, a daily goal, a streak, hearts (optional), lesson levels (each lesson can be levelled up 3 times), and a celebration screen. Wrong answers come back at the end of the lesson.
+- **Motivation**: XP, a daily goal, a streak, hearts (optional), lesson levels (each lesson can be levelled up 3 times), and a celebration screen. Each question is asked once; a wrong answer isn't repeated.
 - **Practice**: a spaced-repetition review (Leitner boxes) of your weakest and overdue words. Each practice session earns a heart.
 - **Buddy**: pick an animal (🐼 🐱 🐶 🐰 🐯 🐲) and name it. It hatches after the first lesson and grows through 5 stages with XP. Its mood shows whether you practised today, and it cheers you on in Cantonese.
 - **Stars and stickers**: 1–3 stars per lesson by accuracy. Every finished session earns an emoji sticker of a word from that unit. Filling a unit's page earns 5 bonus stars.
@@ -30,7 +30,8 @@ A mobile app for learning Cantonese a few minutes a day. It's built with Expo (R
   - **Lantern Catch**: hear a Cantonese word and tap the falling lantern with its meaning before it reaches the river. 3 lives, combos up to ×4, and it speeds up as she goes; at higher levels the lanterns show Cantonese instead.
   - A finished game counts like a lesson: stars, a sticker, a lesson level and XP. Running out of lives ends the round with no stars.
   - Unit tests are always questions.
-- **Looking back**: during a lesson, **←** shows earlier questions with her answer and the correct one. It's read-only, so scores are unaffected.
+- **Going back**: during a lesson, **←** returns to an earlier question. It shows her last answer, and she can answer again (the latest answer counts) or skip ahead.
+- **Session clock**: a ⏱ clock in the lesson and game top bar shows how long she's been learning (paused while the app is in the background).
 - **Learning dashboard** (Profile → Learning dashboard): time today and this week, sessions, average session length, bar charts of minutes and stars per day (7 or 30 days), Questions vs Game time, and a log of every session. Only time with the app open counts.
 - **Phones and tablets**: phones stay in portrait. Tablets rotate freely and get larger text, with two columns in landscape (the path beside the buddy, and rewards beside the sticker book). The rules are in `lib/layout.ts`.
 - **Audio**: the phone's Cantonese text-to-speech voice (`yue-HK` / `zh-HK`). If none is installed, the Learn screen shows a one-time tip and Settings gives the steps: *Settings → System → Languages → Text-to-speech output → Speech Services by Google → ⚙ → Install voice data → Cantonese (Hong Kong)*. Then tap **Check again** in the app's Settings.

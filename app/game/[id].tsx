@@ -6,6 +6,7 @@ import { Screen } from '@/components/Screen';
 import { Button } from '@/components/Button';
 import { CantoText } from '@/components/CantoText';
 import { ProgressBar } from '@/components/ProgressBar';
+import { SessionClock } from '@/components/SessionClock';
 import { SpeakerButton } from '@/components/SpeakerButton';
 import { Lantern, LanternState, LANTERN_HEIGHT } from '@/components/game/Lantern';
 import { useProgress } from '@/lib/context/ProgressContext';
@@ -272,6 +273,7 @@ function LanternCatch({ id }: { id: string }) {
           <Ionicons name="close" size={30} color={theme.colors.textMuted} />
         </Pressable>
         <ProgressBar value={waveIndex / waves.length} color={theme.colors.accent} />
+        <SessionClock activeMs={timer.activeMs} />
         <Text style={styles.lives} testID="lives">
           {'♥'.repeat(Math.max(0, lives))}
           <Text style={styles.livesLost}>{'♥'.repeat(LIVES - Math.max(0, lives))}</Text>
