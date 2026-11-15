@@ -22,11 +22,13 @@ export function useSessionTimer(): { startedAt: number; activeMs: () => number }
     return () => sub.remove();
   }, []);
 
-  return {
+  // The same object every render, so a ticking clock can depend on activeMs.
+  const api = useRef({
     startedAt: timer.current.startedAt,
     activeMs: () => {
       const t = timer.current;
       return t.banked + (t.activeSince === null ? 0 : Date.now() - t.activeSince);
     },
-  };
+  });
+  return api.current;
 }

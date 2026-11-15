@@ -8,6 +8,7 @@ import { Screen } from '@/components/Screen';
 import { Button } from '@/components/Button';
 import { ProgressBar } from '@/components/ProgressBar';
 import { StatPill } from '@/components/StatPills';
+import { SessionClock } from '@/components/SessionClock';
 import { ExerciseView } from '@/components/exercises';
 import { useProgress } from '@/lib/context/ProgressContext';
 import { goToTab } from '@/lib/navigation';
@@ -16,20 +17,12 @@ import { resolveScript } from '@/lib/engine/difficulty';
 import { planLesson, MIN_PRACTICE_WORDS } from '@/lib/engine/plan';
 import { seededRng } from '@/lib/engine/random';
 import { currentHearts } from '@/lib/progress';
+import { Attempts, recordAttempt, scoreAttempts } from '@/lib/engine/attempts';
 import { useSessionTimer } from '@/lib/sessionTimer';
-import { Exercise } from '@/lib/types';
 import { confirm, feedbackHaptic } from '@/lib/ui';
 import { theme } from '@/lib/theme';
 
 const PRAISE = ['Nice!', 'Great job!', 'Correct!', 'Excellent!', '好嘢! (hou2 je5)', 'Amazing!'];
-
-/** An answered question, kept so she can look back at it. */
-interface Step {
-  exercise: Exercise;
-  correct: boolean;
-  correction?: string;
-  given?: string;
-}
 
 export default function LessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -53,67 +46,62 @@ function LessonRunner({ id }: { id: string }) {
 
   // Plan once on mount; later progress updates must not reshuffle the lesson.
   const [plan] = useState(() => (ref ? planLesson(state, ref, seededRng(Date.now()), Date.now()) : null));
-  const [queue, setQueue] = useState<Exercise[]>(() => plan?.exercises ?? []);
+  const exercises = plan?.exercises ?? [];
   const [index, setIndex] = useState(0);
+  // Her latest answer to each question. Going back lets her answer again; wrong answers aren't repeated.
+  const [attempts, setAttempts] = useState<Attempts>({});
+  // Bumped on every visit to a question, so returning to one shows it fresh to answer again.
+  const [visit, setVisit] = useState(0);
   const [feedback, setFeedback] = useState<{ correct: boolean; correction?: string; praise: string } | null>(null);
-  const firstTry = useRef(new Map<string, boolean>());
-  const mistakes = useRef(0);
-  const [history, setHistory] = useState<Step[]>([]);
-  // Index into history while looking back at an earlier question; null when on the current one.
-  const [reviewIndex, setReviewIndex] = useState<number | null>(null);
+
+  const lessonId = !ref ? id : ref.kind === 'practice' ? 'practice' : ref.kind === 'checkpoint' ? `${ref.unit.id}-checkpoint` : ref.lesson.id;
 
   /** Records the session in the time log, once. */
-  const log = (completed: boolean, stars: number, accuracy: number) => {
+  const log = (completed: boolean, stars: number) => {
     if (logged.current || !ref) return;
     logged.current = true;
+    const score = scoreAttempts(attemptsRef.current);
     logSession({
-      lessonId: ref.kind === 'practice' ? 'practice' : ref.kind === 'checkpoint' ? `${ref.unit.id}-checkpoint` : ref.lesson.id,
+      lessonId,
       kind: ref.kind,
       mode: 'qa',
       startedAt: timer.startedAt,
       activeMs: timer.activeMs(),
       stars,
-      accuracy,
+      accuracy: score.answered ? score.correct / Math.max(1, exercises.length) : 0,
       completed,
     });
   };
+  const attemptsRef = useRef(attempts);
+  attemptsRef.current = attempts;
 
   const quit = async () => {
     if (await confirm('Quit lesson?', "You'll lose your progress in this lesson.", 'Quit')) {
       // Time spent still counts in the log, even without finishing.
-      if (firstTry.current.size > 0) log(false, 0, firstTryAccuracy());
+      if (scoreAttempts(attemptsRef.current).answered > 0) log(false, 0);
       leave();
     }
   };
   const quitRef = useRef(quit);
   quitRef.current = quit;
 
-  // Android back button: steps back out of a review, otherwise asks before quitting, like ✕.
-  const reviewRef = useRef(reviewIndex);
-  reviewRef.current = reviewIndex;
+  // Android back button asks before quitting, like ✕. (The ← button goes to the previous question.)
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (reviewRef.current !== null) setReviewIndex(null);
-      else quitRef.current();
+      quitRef.current();
       return true;
     });
     return () => sub.remove();
   }, []);
 
-  const firstTryAccuracy = () => {
-    const tries = [...firstTry.current.values()];
-    return tries.length ? tries.filter(Boolean).length / tries.length : 0;
-  };
-
   const isPractice = ref?.kind === 'practice';
   const heartsOn = state.settings.hearts && !isPractice;
   const hearts = currentHearts(state, Date.now());
-  const originalCount = plan?.exercises.length ?? 0;
 
   if (!ref || !plan) {
     return <Message title="Lesson not found" onClose={leave} />;
   }
-  if (isPractice && plan.exercises.length === 0) {
+  if (isPractice && exercises.length === 0) {
     return (
       <Message
         title="Nothing to practise yet"
@@ -132,47 +120,43 @@ function LessonRunner({ id }: { id: string }) {
     );
   }
 
-  const exercise = queue[index];
+  const exercise = exercises[index];
   const script = resolveScript(state.settings.script, plan.score);
-  // While feedback shows, the current question is already the last history entry.
-  const lastReviewable = history.length - 1 - (feedback ? 1 : 0);
-  const canGoBack = reviewIndex === null ? lastReviewable >= 0 : reviewIndex > 0;
-  const reviewing = reviewIndex !== null;
-  const reviewed = reviewing ? history[reviewIndex] : undefined;
-  const goBack = () => setReviewIndex((i) => (i === null ? lastReviewable : Math.max(0, i - 1)));
+  const previous = attempts[index];
+  const isLast = index + 1 >= exercises.length;
+  const answeredCount = scoreAttempts(attempts).answered;
+
+  const goTo = (i: number) => {
+    setFeedback(null);
+    setIndex(i);
+    setVisit((v) => v + 1);
+  };
 
   const onResult = (correct: boolean, correction?: string, given?: string) => {
     feedbackHaptic(correct);
-    setHistory((h) => [...h, { exercise, correct, correction, given }]);
+    setAttempts((a) => recordAttempt(a, index, { correct, correction, given }));
     answer(exercise.wordIds, correct);
-    // Requeued copies have a suffix; score only the first attempt.
-    const baseId = exercise.id.split('~')[0];
-    if (!firstTry.current.has(baseId)) firstTry.current.set(baseId, correct);
-    if (!correct) {
-      mistakes.current++;
-      if (heartsOn) loseHeart();
-      setQueue((q) => [...q, { ...exercise, id: `${baseId}~${q.length}` }]);
-    }
+    if (!correct && heartsOn) loseHeart();
     setFeedback({ correct, correction, praise: PRAISE[Math.floor(Math.random() * PRAISE.length)] });
   };
 
   const finish = () => {
-    const correctCount = [...firstTry.current.values()].filter(Boolean).length;
+    const score = scoreAttempts(attemptsRef.current);
     const result = complete({
       kind: ref.kind,
-      id: ref.kind === 'practice' ? 'practice' : ref.kind === 'checkpoint' ? `${ref.unit.id}-checkpoint` : ref.lesson.id,
+      id: lessonId,
       unitIndex: ref.kind === 'practice' ? undefined : ref.unit.index,
-      correct: correctCount,
-      total: originalCount,
-      mistakes: mistakes.current,
+      correct: score.correct,
+      total: exercises.length,
+      mistakes: score.mistakes,
     });
     const activeMs = timer.activeMs();
-    log(true, result.starsEarned, correctCount / Math.max(1, originalCount));
+    log(true, result.starsEarned);
     router.replace({
       pathname: '/lesson/complete',
       params: {
         xp: String(result.xpEarned),
-        accuracy: String(Math.round((correctCount / Math.max(1, originalCount)) * 100)),
+        accuracy: String(Math.round((score.correct / Math.max(1, exercises.length)) * 100)),
         kind: ref.kind,
         passed: result.passed ? '1' : '0',
         stars: String(result.starsEarned),
@@ -184,17 +168,18 @@ function LessonRunner({ id }: { id: string }) {
     });
   };
 
+  /** Onwards after answering (or skipping a question she'd already answered). */
   const next = () => {
     const wasWrong = feedback && !feedback.correct;
-    setFeedback(null);
     // Lost the last heart: the lesson ends without credit.
     if (wasWrong && heartsOn && hearts <= 0) {
-      log(false, 0, firstTryAccuracy());
+      setFeedback(null);
+      log(false, 0);
       router.replace({ pathname: '/lesson/complete', params: { kind: ref.kind, failed: '1' } });
       return;
     }
-    if (index + 1 >= queue.length) finish();
-    else setIndex(index + 1);
+    if (isLast) finish();
+    else goTo(index + 1);
   };
 
   return (
@@ -206,93 +191,48 @@ function LessonRunner({ id }: { id: string }) {
         <Pressable
           testID="back"
           accessibilityRole="button"
-          onPress={goBack}
-          disabled={!canGoBack}
+          onPress={() => goTo(index - 1)}
+          disabled={index === 0}
           hitSlop={12}
           accessibilityLabel="Previous question"
-          style={!canGoBack && styles.disabled}
+          style={index === 0 && styles.disabled}
         >
-          <Ionicons name="arrow-back" size={28} color={canGoBack ? theme.colors.text : theme.colors.textMuted} />
+          <Ionicons name="arrow-back" size={28} color={index > 0 ? theme.colors.text : theme.colors.textMuted} />
         </Pressable>
-        <ProgressBar value={index / queue.length} />
+        <ProgressBar value={answeredCount / exercises.length} />
+        <SessionClock activeMs={timer.activeMs} />
         {heartsOn ? <StatPill icon="heart" color={theme.colors.heart} value={hearts} /> : null}
       </View>
-      {ref.kind === 'checkpoint' ? <Text style={styles.tag}>Checkpoint · score 80% to pass</Text> : null}
+      <Text style={styles.position} testID="position">
+        Question {index + 1} of {exercises.length}
+        {ref.kind === 'checkpoint' ? ' · checkpoint: score 80% to pass' : ''}
+      </Text>
+
+      {previous && !feedback ? (
+        <View style={styles.previous} testID="previous-answer">
+          <Text style={styles.previousText}>
+            {previous.correct ? '✓' : '✗'} Last time:{' '}
+            <Text style={styles.correctionStrong}>{previous.given ?? (previous.correct ? 'right' : 'wrong')}</Text>. Answer
+            again, or skip ahead.
+          </Text>
+          <Pressable testID="skip-next" onPress={next} hitSlop={8} style={styles.skip}>
+            <Text style={styles.skipText}>{isLast ? 'Finish →' : 'Skip ahead →'}</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <KeyboardAvoidingView style={styles.body} behavior="padding">
-        {/* The current question stays mounted while looking back, so a half-built answer is kept. */}
-        <View style={[styles.body, reviewing && styles.hidden]}>
-          <ExerciseView
-            key={exercise.id}
-            exercise={exercise}
-            script={script}
-            sound={state.settings.sound}
-            locked={!!feedback}
-            onResult={onResult}
-          />
-        </View>
-        {reviewing ? (
-          <View style={styles.body} testID="review-question">
-            <ExerciseView
-              key={`review-${reviewIndex}`}
-              exercise={reviewed!.exercise}
-              script={script}
-              sound={state.settings.sound}
-              locked
-              onResult={() => {}}
-            />
-          </View>
-        ) : null}
+        <ExerciseView
+          key={`${index}-${visit}`}
+          exercise={exercise}
+          script={script}
+          sound={state.settings.sound}
+          locked={!!feedback}
+          onResult={onResult}
+        />
       </KeyboardAvoidingView>
 
-      {reviewing ? (
-        <View testID="review" style={[styles.sheet, styles.reviewSheet]}>
-          <Text style={styles.reviewTag}>
-            Looking back · question {reviewIndex! + 1} of {history.length}
-          </Text>
-          <View style={styles.sheetHead}>
-            <Ionicons
-              name={reviewed!.correct ? 'checkmark-circle' : 'close-circle'}
-              size={26}
-              color={reviewed!.correct ? theme.colors.success : theme.colors.danger}
-            />
-            <Text style={styles.correction} testID="review-given">
-              {reviewed!.given ? (
-                <>
-                  Your answer: <Text style={styles.correctionStrong}>{reviewed!.given}</Text>
-                </>
-              ) : reviewed!.correct ? (
-                'You got this one right.'
-              ) : (
-                'You got this one wrong.'
-              )}
-            </Text>
-          </View>
-          {!reviewed!.correct && reviewed!.correction ? (
-            <Text style={styles.correction}>
-              Correct answer: <Text style={styles.correctionStrong}>{reviewed!.correction}</Text>
-            </Text>
-          ) : null}
-          <View style={styles.reviewButtons}>
-            <View style={styles.flex}>
-              <Button
-                testID="review-prev"
-                label="← Previous"
-                variant="secondary"
-                disabled={reviewIndex === 0}
-                onPress={() => setReviewIndex((i) => Math.max(0, (i ?? 0) - 1))}
-              />
-            </View>
-            <View style={styles.flex}>
-              <Button
-                testID="review-next"
-                label={reviewIndex! >= lastReviewable ? 'Back to quiz' : 'Next →'}
-                onPress={() => setReviewIndex((i) => (i === null || i >= lastReviewable ? null : i + 1))}
-              />
-            </View>
-          </View>
-        </View>
-      ) : feedback ? (
+      {feedback ? (
         <View
           testID="feedback"
           style={[styles.sheet, { backgroundColor: feedback.correct ? theme.colors.successBg : theme.colors.dangerBg }]}
@@ -314,7 +254,7 @@ function LessonRunner({ id }: { id: string }) {
           ) : null}
           <Button
             testID="continue"
-            label="Continue"
+            label={isLast ? 'Finish' : 'Continue'}
             variant={feedback.correct ? 'success' : 'danger'}
             onPress={next}
           />
@@ -350,11 +290,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing(5),
     paddingTop: theme.spacing(3),
   },
-  tag: {
-    color: theme.colors.accent,
-    fontWeight: '800',
+  position: {
+    color: theme.colors.textMuted,
+    fontWeight: '700',
+    fontSize: 13,
     textAlign: 'center',
     marginTop: theme.spacing(2),
+  },
+  previous: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(2),
+    marginHorizontal: theme.spacing(5),
+    marginTop: theme.spacing(2),
+    padding: theme.spacing(3),
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.surface,
+  },
+  previousText: {
+    flex: 1,
+    color: theme.colors.text,
+    fontSize: 14,
+  },
+  skip: {
+    paddingVertical: theme.spacing(1),
+  },
+  skipText: {
+    color: theme.colors.primary,
+    fontWeight: '800',
   },
   body: {
     flex: 1,
@@ -383,28 +346,8 @@ const styles = StyleSheet.create({
   correctionStrong: {
     fontWeight: '800',
   },
-  hidden: {
-    display: 'none',
-  },
   disabled: {
     opacity: 0.35,
-  },
-  flex: {
-    flex: 1,
-  },
-  reviewSheet: {
-    backgroundColor: theme.colors.surface,
-  },
-  reviewTag: {
-    color: theme.colors.accent,
-    fontWeight: '800',
-    fontSize: 13,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  reviewButtons: {
-    flexDirection: 'row',
-    gap: theme.spacing(3),
   },
   loading: {
     alignItems: 'center',
